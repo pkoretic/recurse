@@ -7,14 +7,11 @@
 // make
 //
 
-#include <QCoreApplication>
-
 #include "../recurse.hpp"
-Recurse app;
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
+    Recurse app(argc, argv);
 
     // middleware1: logger
     app.use([](auto req, auto res, auto next) {
@@ -32,6 +29,4 @@ int main(int argc, char *argv[])
     });
 
     app.listen(3000);
-
-    return a.exec();
 }
