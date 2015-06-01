@@ -15,11 +15,8 @@ int main(int argc, char *argv[])
 
     // middleware1: logger
     app.use([](auto req, auto res, auto next) {
-
-        qDebug() << req.body;
-
+        qDebug() << "incoming request:" << req.body;
         next();
-
         qDebug() << "outgoing response:" << res;
     });
 
