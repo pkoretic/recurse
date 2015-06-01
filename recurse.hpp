@@ -1,6 +1,7 @@
 #ifndef RECURSE_HPP
 #define RECURSE_HPP
 
+#include <QCoreApplication>
 #include <QObject>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -31,13 +32,14 @@ class Recurse : public QObject
 {
 public:
 
-    Recurse(QObject *parent = NULL);
+    Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
 
 private:
+    QCoreApplication app;
     QTcpServer m_tcp_server;
     quint64 m_port;
     QVector<next_f> m_middleware;
@@ -48,7 +50,7 @@ private:
     QString response;
 };
 
-Recurse::Recurse(QObject *parent)
+Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
 {
     Q_UNUSED(parent);
 };
@@ -94,7 +96,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
         });
     });
 
-    return true;
+    return app.exec();
 };
 
 //!
