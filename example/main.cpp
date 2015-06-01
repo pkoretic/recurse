@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // middleware1: logger
-    app.use([](auto req, auto res, auto next) {
+    app.use([](auto req, auto &res, auto next) {
         qDebug() << "incoming request:" << req.body;
         next();
         qDebug() << "outgoing response:" << res;
