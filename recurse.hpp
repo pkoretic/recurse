@@ -140,19 +140,19 @@ void Recurse::parse_http(QString &data)
     QStringList data_list = data.split("\r\n");
 
     qDebug() << "parser after split:" << data_list;
-    bool isBody = false;
+    bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
         QStringList item_list = data_list.at(i).split(":");
 
-        if (item_list.length() < 2 && item_list.at(0).size() < 1 && !isBody) {
-            isBody = true;
+        if (item_list.length() < 2 && item_list.at(0).size() < 1 && !is_body) {
+            is_body = true;
             continue;
         }
         else if (i == 0 && item_list.length() < 2) {
             request.headers["method"] = item_list.at(0);
         }
-        else if (!isBody) {
+        else if (!is_body) {
             qDebug() << "header: " << item_list.at(0);
             request.headers[item_list.at(0)] = item_list.at(1);
         }
