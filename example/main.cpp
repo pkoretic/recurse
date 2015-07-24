@@ -22,8 +22,9 @@ int main(int argc, char *argv[])
 
     // middleware2: hello world
     app.use([](auto req, auto &res, auto next) {
-       res = req.data.trimmed() +  " hello world\n";
+        res = req.data.trimmed() +  " hello world\n";
     });
 
+    qDebug() << "listening on port 3000...";
     app.listen(3000);
 }
