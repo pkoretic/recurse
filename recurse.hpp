@@ -19,7 +19,7 @@ struct Request {
 
     // higher level data
     QHash<QString, QString> headers;
-    QString body;
+    QString body, method, proto, url;
 };
 
 typedef function<void(Request &request, QString &response,  function<void()> next)> next_f;
@@ -45,7 +45,7 @@ private:
     QVector<next_f> m_middleware;
     int current_middleware = 0;
     void m_next();
-    void parse_http(QString &data);
+    void parse_http(const QString &data);
 
     Request request;
     QString response;
@@ -134,7 +134,7 @@ void Recurse::use(next_f f)
 //!
 //! \param data reference to data received from the tcp connection
 //!
-void Recurse::parse_http(QString &data)
+void Recurse::parse_http(const QString &data)
 {
     qDebug() << "parser:" << data;
     QStringList data_list = data.split("\r\n");
@@ -150,11 +150,14 @@ void Recurse::parse_http(QString &data)
             continue;
         }
         else if (i == 0 && item_list.length() < 2) {
-            request.headers["method"] = item_list.at(0);
+            QStringList first_line = item_list.at(0).split(" ");
+            request.method = first_line.at(0);
+            request.url = first_line.at(1).trimmed();
+            request.proto = first_line.at(2).trimmed();
         }
         else if (!is_body) {
             qDebug() << "header: " << item_list.at(0);
-            request.headers[item_list.at(0)] = item_list.at(1);
+            request.headers[item_list.at(0).toLower()] = item_list.at(1).trimmed();
         }
         else {
             request.body.append(item_list.at(0));
@@ -163,8 +166,7 @@ void Recurse::parse_http(QString &data)
         qDebug() << item_list;
     }
 
-    qDebug() << "headers ready: " << request.headers;
-    qDebug() << "body ready: " << request.body;
+    qDebug() << "request ctx ready: " << request.method << request.url << request.headers << request.proto << request.body;
 };
 
 #endif // RECURSE_HPP
