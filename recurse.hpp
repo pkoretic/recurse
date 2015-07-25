@@ -14,7 +14,7 @@ using std::function;
 using std::bind;
 
 struct Request {
-    // tpc request data
+    // tcp request data
     QString data;
 
     // higher level data
@@ -83,7 +83,11 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
         connect(client, &QTcpSocket::readyRead, [this, client] {
             request.data = client->readAll();
-            parse_http(request.data);
+            QRegExp httpRx("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
+
+            if (request.data.indexOf(httpRx, 0) != -1) {
+                parse_http(request.data);
+            }
 
             qDebug() << "client request: " << request.data;
 
@@ -136,10 +140,7 @@ void Recurse::use(next_f f)
 //!
 void Recurse::parse_http(const QString &data)
 {
-    qDebug() << "parser:" << data;
     QStringList data_list = data.split("\r\n");
-
-    qDebug() << "parser after split:" << data_list;
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
@@ -156,14 +157,11 @@ void Recurse::parse_http(const QString &data)
             request.proto = first_line.at(2).trimmed();
         }
         else if (!is_body) {
-            qDebug() << "header: " << item_list.at(0);
             request.headers[item_list.at(0).toLower()] = item_list.at(1).trimmed();
         }
         else {
             request.body.append(item_list.at(0));
         }
-
-        qDebug() << item_list;
     }
 
     qDebug() << "request ctx ready: " << request.method << request.url << request.headers << request.proto << request.body;
