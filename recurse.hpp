@@ -101,15 +101,14 @@ bool Recurse::listen(quint64 port, QHostAddress address)
                 if (response.status == 0)
                     response.status = 200;
 
-                header = http_build_header(response);
+                header = http_build_header(response) + "\r\n\r\n";
             }
 
-            QString foo = header + "\r\n\r\n" + response.body;
-            std::cout << foo.toStdString() << std::endl;
-            // qDebug() << "middleware end; resp:" << foo2;
+            QString response_data = header + response.body;
 
             // send response to the client
-            auto check = client->write(foo.toStdString().c_str(), foo.size());
+            qint64 check = client->write(response_data.toStdString().c_str(), response_data.size());
+
             qDebug() << "socket write debug:" << check;
             client->close();
         });
