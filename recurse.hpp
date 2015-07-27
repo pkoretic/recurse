@@ -109,7 +109,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             // qDebug() << "middleware end; resp:" << foo2;
 
             // send response to the client
-            auto check = client->write(foo.toStdString().c_str(), response.body.size());
+            auto check = client->write(foo.toStdString().c_str(), foo.size());
             qDebug() << "socket write debug:" << check;
             client->close();
         });
