@@ -9,27 +9,13 @@
 #include <QHash>
 #include <QStringBuilder>
 #include <QVector>
+#include "request.hpp"
+#include "response.hpp"
 
 #include <functional>
 using std::function;
 using std::bind;
 using std::ref;
-
-struct Request {
-    // tcp request data
-    QString data;
-
-    // higher level data
-    QHash<QString, QString> header;
-    QString body, method, proto, url;
-};
-
-struct Response {
-    QString body;
-    QHash<QString, QString> header;
-    unsigned short int status;
-    QString method, proto;
-};
 
 typedef function<void(Request &request, Response &response, function<void()> next)> next_f;
 
@@ -192,9 +178,10 @@ void Recurse::http_build_header(Response &response)
 {
     // qDebug() << "http_build_header:" << response.status;
     if (response.status == 0)
-        response.status = 204;
+        response.status = 200;
 
-    QString header = response.proto % " " % QString::number(response.status) % " OK\r\n";
+    QString header = response.proto % " " % QString::number(response.status) % " "
+        % response.http_codes[response.status] % "\r\n";
 
     qDebug() << "header" << header;
 }
