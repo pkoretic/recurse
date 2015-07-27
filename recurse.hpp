@@ -12,6 +12,7 @@
 #include "request.hpp"
 #include "response.hpp"
 
+#include <iostream>
 #include <functional>
 using std::function;
 using std::bind;
@@ -41,7 +42,7 @@ private:
     int current_middleware = 0;
     void m_next(Request &request, Response &response);
     void http_parse(Request &request);
-    void http_build_header(Response &response);
+    QString http_build_header(const Response &response);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -90,16 +91,27 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             if (m_middleware.count() > 0)
                 m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, ref(request), ref(response)));
 
-            qDebug() << "middleware end; resp body:" << response.body;
             current_middleware = 0;
+            QString header;
 
-            if (isHttp)
+            if (isHttp) {
                 response.method = request.method;
                 response.proto = request.proto;
-                http_build_header(response);
+
+                if (response.status == 0)
+                    response.status = 200;
+
+                header = http_build_header(response);
+            }
+
+            QString foo = header + "\r\n\r\n" + response.body;
+            std::cout << foo.toStdString() << std::endl;
+            // qDebug() << "middleware end; resp:" << foo2;
 
             // send response to the client
-            client->write(response.body.toStdString().c_str(), response.body.size());
+            auto check = client->write(foo.toStdString().c_str(), response.body.size());
+            qDebug() << "socket write debug:" << check;
+            client->close();
         });
     });
 
@@ -174,16 +186,22 @@ void Recurse::http_parse(Request &request)
 //!
 //! \param response reference to the Response instance
 //!
-void Recurse::http_build_header(Response &response)
+QString Recurse::http_build_header(const Response &response)
 {
-    // qDebug() << "http_build_header:" << response.status;
-    if (response.status == 0)
-        response.status = 200;
+    qDebug() << "resp header:" << response.header["content-type"];
 
     QString header = response.proto % " " % QString::number(response.status) % " "
         % response.http_codes[response.status] % "\r\n";
 
+    if (response.header["content-type"] == "")
+        header += "content-type: text/html; charset=utf-8";
+    else
+        header += "content-type: " % response.header["content-type"];
+
     qDebug() << "header" << header;
+
+    return header;
+    // response.body = header + "\r\n\r\n" + response.body;
 }
 
 #endif // RECURSE_HPP
