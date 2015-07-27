@@ -101,7 +101,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
                 if (response.status == 0)
                     response.status = 200;
 
-                header = http_build_header(response) + "\r\n\r\n";
+                header = http_build_header(response);
             }
 
             QString response_data = header + response.body;
@@ -187,20 +187,30 @@ void Recurse::http_parse(Request &request)
 //!
 QString Recurse::http_build_header(const Response &response)
 {
-    qDebug() << "resp header:" << response.header["content-type"];
-
     QString header = response.proto % " " % QString::number(response.status) % " "
         % response.http_codes[response.status] % "\r\n";
 
-    if (response.header["content-type"] == "")
-        header += "content-type: text/html; charset=utf-8";
-    else
-        header += "content-type: " % response.header["content-type"];
+    QList<QString> header_keys = response.header.keys();
+
+    // set default header fields
+    QList<QString> default_keys = response.default_headers.keys();
+
+    for (int i = 0, len = default_keys.length(); i < len; ++i) {
+        if (response.header[default_keys[i]] == "")
+            header += default_keys[i] % ": " % response.default_headers[default_keys[i]] % "\r\n";
+    }
+
+    for (int i = 0, len = header_keys.length(); i < len; ++i) {
+        QString key = header_keys[i];
+        QString value = response.header[key];
+
+        header += key % ": " % value % "\r\n";
+        qDebug() << key << " " << value;
+    }
 
     qDebug() << "header" << header;
 
-    return header;
-    // response.body = header + "\r\n\r\n" + response.body;
+    return header + "\r\n";
 }
 
 #endif // RECURSE_HPP
