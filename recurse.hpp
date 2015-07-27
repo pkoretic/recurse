@@ -112,8 +112,6 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 void Recurse::m_next(Request &request, QString &response)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
-    qDebug() << "resp so far:" << response;
-    qDebug() << "req so far:" << request.body;
 
     if (++current_middleware >= m_middleware.size()) {
         return;
