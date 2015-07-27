@@ -18,11 +18,16 @@ struct Request {
     QString data;
 
     // higher level data
-    QHash<QString, QString> headers;
+    QHash<QString, QString> header;
     QString body, method, proto, url;
 };
 
-typedef function<void(Request &request, QString &response, function<void()> next)> next_f;
+struct Response {
+    QString body;
+    QHash<QString, QString> header;
+};
+
+typedef function<void(Request &request, Response &response, function<void()> next)> next_f;
 
 //!
 //! \brief The Recurse class
@@ -44,8 +49,8 @@ private:
     quint64 m_port;
     QVector<next_f> m_middleware;
     int current_middleware = 0;
-    void m_next(Request &request, QString &response);
-    void parse_http(Request &request);
+    void m_next(Request &request, Response &response);
+    void http_parse(Request &request);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -80,25 +85,25 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
         connect(client, &QTcpSocket::readyRead, [this, client] {
             Request request;
-            QString response;
+            Response response;
 
             request.data = client->readAll();
             QRegExp httpRx("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
             bool isHttp = request.data.contains(httpRx);
 
             if (isHttp)
-                parse_http(request);
+                http_parse(request);
 
             qDebug() << "client request: " << request.data;
 
             if (m_middleware.count() > 0)
                 m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, std::ref(request), std::ref(response)));
 
-            qDebug() << "middleware end; resp:" << response;
+            qDebug() << "middleware end; resp body:" << response.body;
             current_middleware = 0;
 
             // send response to the client
-            client->write(response.toStdString().c_str(), response.size());
+            client->write(response.body.toStdString().c_str(), response.body.size());
         });
     });
 
@@ -109,7 +114,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::m_next
 //! call next middleware
 //!
-void Recurse::m_next(Request &request, QString &response)
+void Recurse::m_next(Request &request, Response &response)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
 
@@ -133,12 +138,12 @@ void Recurse::use(next_f f)
 };
 
 //!
-//! \brief Recurse::parse_http
+//! \brief Recurse::http_parse
 //! parse http data
 //!
 //! \param data reference to data received from the tcp connection
 //!
-void Recurse::parse_http(Request &request)
+void Recurse::http_parse(Request &request)
 {
     QStringList data_list = request.data.split("\r\n");
     bool is_body = false;
@@ -157,14 +162,14 @@ void Recurse::parse_http(Request &request)
             request.proto = first_line.at(2).trimmed();
         }
         else if (!is_body) {
-            request.headers[item_list.at(0).toLower()] = item_list.at(1).trimmed();
+            request.header[item_list.at(0).toLower()] = item_list.at(1).trimmed();
         }
         else {
             request.body.append(item_list.at(0));
         }
     }
 
-    qDebug() << "request ctx ready: " << request.method << request.url << request.headers << request.proto << request.body;
+    qDebug() << "request ctx ready: " << request.method << request.url << request.header << request.proto << request.body;
 };
 
 #endif // RECURSE_HPP
