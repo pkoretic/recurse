@@ -13,6 +13,10 @@ struct Response {
         {404, "Not Found"},
         {500, "Internal Server Error"}
     };
+    QHash<QString, QString> default_headers
+    {
+        {"content-type", "text/html; charset=utf-8"}
+    };
 };
 
 #endif

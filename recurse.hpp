@@ -12,6 +12,7 @@
 #include "request.hpp"
 #include "response.hpp"
 
+#include <iostream>
 #include <functional>
 using std::function;
 using std::bind;
@@ -41,7 +42,7 @@ private:
     int current_middleware = 0;
     void m_next(Request &request, Response &response);
     void http_parse(Request &request);
-    void http_build_header(Response &response);
+    QString http_build_header(const Response &response);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -90,16 +91,26 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             if (m_middleware.count() > 0)
                 m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, ref(request), ref(response)));
 
-            qDebug() << "middleware end; resp body:" << response.body;
             current_middleware = 0;
+            QString header;
 
-            if (isHttp)
+            if (isHttp) {
                 response.method = request.method;
                 response.proto = request.proto;
-                http_build_header(response);
+
+                if (response.status == 0)
+                    response.status = 200;
+
+                header = http_build_header(response);
+            }
+
+            QString response_data = header + response.body;
 
             // send response to the client
-            client->write(response.body.toStdString().c_str(), response.body.size());
+            qint64 check = client->write(response_data.toStdString().c_str(), response_data.size());
+
+            qDebug() << "socket write debug:" << check;
+            client->close();
         });
     });
 
@@ -174,16 +185,32 @@ void Recurse::http_parse(Request &request)
 //!
 //! \param response reference to the Response instance
 //!
-void Recurse::http_build_header(Response &response)
+QString Recurse::http_build_header(const Response &response)
 {
-    // qDebug() << "http_build_header:" << response.status;
-    if (response.status == 0)
-        response.status = 200;
-
     QString header = response.proto % " " % QString::number(response.status) % " "
         % response.http_codes[response.status] % "\r\n";
 
+    QList<QString> header_keys = response.header.keys();
+
+    // set default header fields
+    QList<QString> default_keys = response.default_headers.keys();
+
+    for (int i = 0, len = default_keys.length(); i < len; ++i) {
+        if (response.header[default_keys[i]] == "")
+            header += default_keys[i] % ": " % response.default_headers[default_keys[i]] % "\r\n";
+    }
+
+    for (int i = 0, len = header_keys.length(); i < len; ++i) {
+        QString key = header_keys[i];
+        QString value = response.header[key];
+
+        header += key % ": " % value % "\r\n";
+        qDebug() << key << " " << value;
+    }
+
     qDebug() << "header" << header;
+
+    return header + "\r\n";
 }
 
 #endif // RECURSE_HPP
