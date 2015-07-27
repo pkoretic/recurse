@@ -84,10 +84,10 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
             request.data = client->readAll();
             QRegExp httpRx("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
+            bool isHttp = request.data.contains(httpRx);
 
-            if (request.data.indexOf(httpRx, 0) != -1) {
+            if (isHttp)
                 parse_http(request);
-            }
 
             qDebug() << "client request: " << request.data;
 
@@ -97,7 +97,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             qDebug() << "middleware end; resp:" << response;
             current_middleware = 0;
 
-            // handle response
+            // send response to the client
             client->write(response.toStdString().c_str(), response.size());
         });
     });
