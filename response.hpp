@@ -6,13 +6,12 @@ struct Response {
     QHash<QString, QString> header;
     unsigned short int status;
     QString method, proto;
-    QHash<unsigned short int, QString> http_codes;
-
-    Response() {
-        http_codes.insert(200, "OK");
-        http_codes.insert(204, "No Content");
-        http_codes.insert(404, "Not Found");
-        http_codes.insert(500, "Internal Server Error");
+    QHash<unsigned short int, QString> http_codes
+    {
+        {200, "OK"},
+        {204, "No Content"},
+        {404, "Not Found"},
+        {500, "Internal Server Error"}
     };
 };
 
