@@ -22,7 +22,7 @@ struct Request {
     QString body, method, proto, url;
 };
 
-typedef function<void(Request &request, QString &response,  function<void()> next)> next_f;
+typedef function<void(Request &request, QString &response, function<void()> next)> next_f;
 
 //!
 //! \brief The Recurse class
@@ -44,11 +44,8 @@ private:
     quint64 m_port;
     QVector<next_f> m_middleware;
     int current_middleware = 0;
-    void m_next();
-    void parse_http(const QString &data);
-
-    Request request;
-    QString response;
+    void m_next(Request &request, QString &response);
+    void parse_http(Request &request);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -82,19 +79,22 @@ bool Recurse::listen(quint64 port, QHostAddress address)
         QTcpSocket *client = m_tcp_server.nextPendingConnection();
 
         connect(client, &QTcpSocket::readyRead, [this, client] {
+            Request request;
+            QString response;
+
             request.data = client->readAll();
             QRegExp httpRx("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
             if (request.data.indexOf(httpRx, 0) != -1) {
-                parse_http(request.data);
+                parse_http(request);
             }
 
             qDebug() << "client request: " << request.data;
 
             if (m_middleware.count() > 0)
-                m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this));
+                m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, std::ref(request), std::ref(response)));
 
-            qDebug() << "middleware end";
+            qDebug() << "middleware end; resp:" << response;
             current_middleware = 0;
 
             // handle response
@@ -109,15 +109,17 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::m_next
 //! call next middleware
 //!
-void Recurse::m_next()
+void Recurse::m_next(Request &request, QString &response)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
+    qDebug() << "resp so far:" << response;
+    qDebug() << "req so far:" << request.body;
 
     if (++current_middleware >= m_middleware.size()) {
         return;
     };
 
-    m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this));
+    m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, std::ref(request), std::ref(response)));
 
 };
 
@@ -138,9 +140,9 @@ void Recurse::use(next_f f)
 //!
 //! \param data reference to data received from the tcp connection
 //!
-void Recurse::parse_http(const QString &data)
+void Recurse::parse_http(Request &request)
 {
-    QStringList data_list = data.split("\r\n");
+    QStringList data_list = request.data.split("\r\n");
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
