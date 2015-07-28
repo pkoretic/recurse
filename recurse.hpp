@@ -12,7 +12,6 @@
 #include "request.hpp"
 #include "response.hpp"
 
-#include <iostream>
 #include <functional>
 using std::function;
 using std::bind;
