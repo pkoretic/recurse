@@ -155,6 +155,11 @@ void Recurse::http_parse(Request &request)
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
+        if (is_body) {
+            request.body.append(data_list.at(i));
+            continue;
+        }
+
         QStringList entity_item = data_list.at(i).split(":");
 
         if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body) {
@@ -166,13 +171,10 @@ void Recurse::http_parse(Request &request)
             request.method = first_line.at(0);
             request.url = first_line.at(1).trimmed();
             request.proto = first_line.at(2).trimmed();
+            continue;
         }
-        else if (!is_body) {
-            request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
-        }
-        else {
-            request.body.append(data_list.at(i));
-        }
+
+        request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
     }
 
     qDebug() << "request ctx ready: " << request.method << request.url << request.header << request.proto << request.body;
@@ -204,7 +206,7 @@ QString Recurse::http_build_header(const Response &response)
         header += j.key() % ": " % j.value() % "\r\n";
     }
 
-    qDebug() << "header" << header;
+    qDebug() << "response header" << header;
 
     return header + "\r\n";
 }
