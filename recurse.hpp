@@ -155,23 +155,23 @@ void Recurse::http_parse(Request &request)
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
-        QStringList item_list = data_list.at(i).split(":");
+        QStringList entity_item = data_list.at(i).split(":");
 
-        if (item_list.length() < 2 && item_list.at(0).size() < 1 && !is_body) {
+        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body) {
             is_body = true;
             continue;
         }
-        else if (i == 0 && item_list.length() < 2) {
-            QStringList first_line = item_list.at(0).split(" ");
+        else if (i == 0 && entity_item.length() < 2) {
+            QStringList first_line = entity_item.at(0).split(" ");
             request.method = first_line.at(0);
             request.url = first_line.at(1).trimmed();
             request.proto = first_line.at(2).trimmed();
         }
         else if (!is_body) {
-            request.header[item_list.at(0).toLower()] = item_list.at(1).trimmed();
+            request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
         }
         else {
-            request.body.append(item_list.at(0));
+            request.body.append(data_list.at(i));
         }
     }
 
@@ -197,6 +197,7 @@ QString Recurse::http_build_header(const Response &response)
             header += i.key() % ": " % i.value() % "\r\n";
     }
 
+    // set user-defined header fields
     QHash<QString, QString>::const_iterator j;
 
     for (j = response.header.constBegin(); j != response.header.constEnd(); ++j) {
