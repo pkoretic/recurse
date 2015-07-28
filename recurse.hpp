@@ -177,7 +177,7 @@ void Recurse::http_parse(Request &request)
         request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
     }
 
-    qDebug() << "request ctx ready: " << request.method << request.url << request.header << request.proto << request.body;
+    qDebug() << "request object populated: " << request.method << request.url << request.header << request.proto << request.body;
 };
 
 //!
