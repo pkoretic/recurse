@@ -4,7 +4,7 @@
 struct Response {
     QString body;
     QHash<QString, QString> header;
-    unsigned short int status;
+    unsigned short int status = 0;
     QString method, proto;
     QHash<unsigned short int, QString> http_codes
     {
