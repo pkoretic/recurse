@@ -189,22 +189,18 @@ QString Recurse::http_build_header(const Response &response)
     QString header = response.proto % " " % QString::number(response.status) % " "
         % response.http_codes[response.status] % "\r\n";
 
-    QList<QString> header_keys = response.header.keys();
-
     // set default header fields
-    QList<QString> default_keys = response.default_headers.keys();
+    QHash<QString, QString>::const_iterator i;
 
-    for (int i = 0, len = default_keys.length(); i < len; ++i) {
-        if (response.header[default_keys[i]] == "")
-            header += default_keys[i] % ": " % response.default_headers[default_keys[i]] % "\r\n";
+    for (i = response.default_headers.constBegin(); i != response.default_headers.constEnd(); ++i) {
+        if (response.header[i.key()] == "")
+            header += i.key() % ": " % i.value() % "\r\n";
     }
 
-    for (int i = 0, len = header_keys.length(); i < len; ++i) {
-        QString key = header_keys[i];
-        QString value = response.header[key];
+    QHash<QString, QString>::const_iterator j;
 
-        header += key % ": " % value % "\r\n";
-        qDebug() << key << " " << value;
+    for (j = response.header.constBegin(); j != response.header.constEnd(); ++j) {
+        header += j.key() % ": " % j.value() % "\r\n";
     }
 
     qDebug() << "header" << header;
