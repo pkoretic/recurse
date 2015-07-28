@@ -10,18 +10,26 @@ int main(int argc, char *argv[])
 {
     Recurse app(argc, argv);
 
-    // middleware1: logger
-    app.use([](auto req, auto &res, auto next) {
-        qDebug() << "incoming request:" << req.body;
+    // Start middleware
+    app.use([](auto &req, auto &res, auto next) {
+        qDebug() << "received a new request";
         next();
-        qDebug() << "outgoing response:" << res;
     });
 
-    // middleware2: hello world
-    app.use([](auto req, auto &res, auto next) {
-       res = req.data.trimmed() +  " hello world\n";
+    app.use([](auto &req, auto &res, auto next) {
+        qDebug() << "routed request" << req.header;
+        res.header["content-type"] = "application/json";
+        next();
     });
 
+    app.use([](auto &req, auto &res, auto next) {
+        qDebug() << "last route" << req.header;
+        res.header["x-foo-data"] = "tvmid";
+        res.status = 200;
+        res.body = "hello";
+    });
+
+    qDebug() << "listening on port 3000...";
     app.listen(3000);
 }
 ```
