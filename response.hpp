@@ -51,6 +51,7 @@ struct Response {
     };
     QHash<QString, QString> default_headers
     {
+        {"content-length", ""},
         {"content-type", "text/html; charset=utf-8"}
     };
 };
