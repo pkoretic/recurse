@@ -195,7 +195,9 @@ QString Recurse::http_build_header(const Response &response)
     QHash<QString, QString>::const_iterator i;
 
     for (i = response.default_headers.constBegin(); i != response.default_headers.constEnd(); ++i) {
-        if (response.header[i.key()] == "")
+        if (i.key() == "content-length" && response.header[i.key()] == "")
+            header += i.key() % ": " % QString::number(response.body.size()) % "\r\n";
+        else if (response.header[i.key()] == "")
             header += i.key() % ": " % i.value() % "\r\n";
     }
 
