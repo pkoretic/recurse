@@ -7,7 +7,7 @@ struct Request {
 
     // higher level data
     QHash<QString, QString> header;
-    QHash<QString, QVariant> body_ph;
+    QHash<QString, QVariant> body_parsed;
     QString body, method, proto, url;
 };
 
