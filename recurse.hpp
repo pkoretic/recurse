@@ -79,11 +79,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             Response response;
 
             request.data = client->readAll();
-            QRegExp httpRx("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
-            bool isHttp = request.data.contains(httpRx);
-
-            if (isHttp)
-                http_parse(request);
+            http_parse(request);
 
             qDebug() << "client request: " << request.data;
 
@@ -93,16 +89,13 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             current_middleware = 0;
             QString header;
 
-            if (isHttp) {
-                response.method = request.method;
-                response.proto = request.proto;
+            response.method = request.method;
+            response.proto = request.proto;
 
-                if (response.status == 0)
-                    response.status = 200;
+            if (response.status == 0)
+                response.status = 200;
 
-                header = http_build_header(response);
-            }
-
+            header = http_build_header(response);
             QString response_data = header + response.body;
 
             // send response to the client
