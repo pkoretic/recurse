@@ -118,6 +118,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
             qDebug() << "socket write debug:" << check;
             connections[socket_id].socket->close();
+            connections.remove(socket_id);
         });
     });
 
