@@ -36,12 +36,21 @@ public:
 private:
     QCoreApplication app;
     QTcpServer m_tcp_server;
+
     quint64 m_port;
     QVector<next_f> m_middleware;
     int current_middleware = 0;
-    void m_next(Request &request, Response &response);
+    void m_next(int &socket_id);
     void http_parse(Request &request);
     QString http_build_header(const Response &response);
+
+    struct Client {
+        QTcpSocket *socket;
+        Request request;
+        Response response;
+    };
+
+    QHash<int, Client> connections;
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -72,37 +81,43 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
-        QTcpSocket *client = m_tcp_server.nextPendingConnection();
+        int socket_id = rand();
 
-        connect(client, &QTcpSocket::readyRead, [this, client] {
-            Request request;
-            Response response;
+        connections[socket_id] = {
+             m_tcp_server.nextPendingConnection()
+        };
 
-            request.data = client->readAll();
-            http_parse(request);
+        connect(connections[socket_id].socket, &QTcpSocket::readyRead, [this, socket_id] {
+            connections[socket_id].request.data = connections[socket_id].socket->readAll();
+            http_parse(connections[socket_id].request);
 
-            qDebug() << "client request: " << request.data;
+            qDebug() << "client request: " << connections[socket_id].request.data;
 
             if (m_middleware.count() > 0)
-                m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, ref(request), ref(response)));
+                m_middleware[current_middleware](
+                    connections[socket_id].request,
+                    connections[socket_id].response,
+                    bind(&Recurse::m_next, this, socket_id));
 
             current_middleware = 0;
             QString header;
 
-            response.method = request.method;
-            response.proto = request.proto;
+            connections[socket_id].response.method = connections[socket_id].request.method;
+            connections[socket_id].response.proto = connections[socket_id].request.proto;
 
-            if (response.status == 0)
-                response.status = 200;
+            if (connections[socket_id].response.status == 0)
+                connections[socket_id].response.status = 200;
 
-            header = http_build_header(response);
-            QString response_data = header + response.body;
+            header = http_build_header(connections[socket_id].response);
+            QString response_data = header + connections[socket_id].response.body;
 
             // send response to the client
-            qint64 check = client->write(response_data.toStdString().c_str(), response_data.size());
+            qint64 check = connections[socket_id].socket->write(
+                response_data.toStdString().c_str(),
+                response_data.size());
 
             qDebug() << "socket write debug:" << check;
-            client->close();
+            connections[socket_id].socket->close();
         });
     });
 
@@ -113,7 +128,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::m_next
 //! call next middleware
 //!
-void Recurse::m_next(Request &request, Response &response)
+void Recurse::m_next(int &socket_id)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
 
@@ -121,8 +136,10 @@ void Recurse::m_next(Request &request, Response &response)
         return;
     };
 
-    m_middleware[current_middleware](request, response, bind(&Recurse::m_next, this, ref(request), ref(response)));
-
+    m_middleware[current_middleware](
+        connections[socket_id].request,
+        connections[socket_id].response,
+        bind(&Recurse::m_next, this, socket_id));
 };
 
 //!
