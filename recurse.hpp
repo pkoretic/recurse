@@ -43,6 +43,7 @@ private:
     void m_next(int &socket_id);
     void http_parse(Request &request);
     QString http_build_header(const Response &response);
+    QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
     struct Client {
         QTcpSocket *socket;
@@ -88,10 +89,14 @@ bool Recurse::listen(quint64 port, QHostAddress address)
         };
 
         connect(connections[socket_id].socket, &QTcpSocket::readyRead, [this, socket_id] {
-            connections[socket_id].request.data = connections[socket_id].socket->readAll();
+            connections[socket_id].request.data += connections[socket_id].socket->readAll();
+            qDebug() << "client request: " << connections[socket_id].request.data;
+
             http_parse(connections[socket_id].request);
 
-            qDebug() << "client request: " << connections[socket_id].request.data;
+            if (connections[socket_id].request.body_length
+                < connections[socket_id].request.header["content-length"].toInt())
+                    return;
 
             if (m_middleware.count() > 0)
                 m_middleware[current_middleware](
@@ -162,12 +167,19 @@ void Recurse::use(next_f f)
 //!
 void Recurse::http_parse(Request &request)
 {
+    // if no header is present, just append all data to request.body
+    if (!request.data.contains(httpRx)) {
+        request.body.append(request.data);
+        return;
+    }
+
     QStringList data_list = request.data.split("\r\n");
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i) {
         if (is_body) {
             request.body.append(data_list.at(i));
+            request.body_length += request.body.size();
             continue;
         }
 
@@ -188,7 +200,9 @@ void Recurse::http_parse(Request &request)
         request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
     }
 
-    qDebug() << "request object populated: " << request.method << request.url << request.header << request.proto << request.body;
+    qDebug() << "request object populated: "
+        << request.method << request.url << request.header << request.proto << request.body
+        << request.body_length;
 };
 
 //!
