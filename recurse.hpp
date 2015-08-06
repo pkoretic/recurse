@@ -95,7 +95,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             http_parse(connections[socket_id].request);
 
             if (connections[socket_id].request.body_length
-                < connections[socket_id].request.header["content-length"].toInt())
+                < connections[socket_id].request.header["content-length"].toLongLong())
                     return;
 
             if (m_middleware.count() > 0)
