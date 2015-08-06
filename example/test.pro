@@ -14,6 +14,4 @@ SOURCES += main.cpp
 # TODO: avoid this
 QMAKE_CXXFLAGS_WARN_ON = -Wall -Wno-unused-parameter
 
-macx {
-    QMAKE_CXXFLAGS += -stdlib=libc++
-}
+QMAKE_CXXFLAGS += -std=c++14
