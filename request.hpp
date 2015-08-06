@@ -9,7 +9,7 @@ struct Request {
     QHash<QString, QString> header;
     QHash<QString, QVariant> body_parsed;
     QString body, method, proto, url;
-    int body_length = 0;
+    quint64 body_length = 0;
 };
 
 #endif

@@ -4,9 +4,9 @@
 struct Response {
     QString body;
     QHash<QString, QString> header;
-    unsigned short int status = 0;
+    quint16 status = 0;
     QString method, proto;
-    QHash<unsigned short int, QString> http_codes
+    QHash<quint16, QString> http_codes
     {
         {100, "Continue"},
         {101, "Switching Protocols"},
