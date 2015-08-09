@@ -30,7 +30,7 @@ public:
         end();
     };
 
-    void send(const QJsonDocument &body = QJsonDocument()) {
+    void send(const QJsonDocument &body) {
         type("application/json");
         qDebug() << " body:" << body;
         m_body = body.toJson(QJsonDocument::Compact);
