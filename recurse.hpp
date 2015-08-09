@@ -87,7 +87,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
             http_parse(client->request);
 
-            if (client->request.body_length < client->request.header["content-length"].toLongLong())
+            if (client->request.length < client->request.header["content-length"].toLongLong())
                     return;
 
             if (m_middleware.count() > 0) {
@@ -178,6 +178,9 @@ void Recurse::end(Client *client)
 //!
 void Recurse::http_parse(Request &request)
 {
+    // Save client ip address
+    request.ip = request.socket->peerAddress();
+
     // if no header is present, just append all data to request.body
     if (!request.data.contains(httpRx)) {
         request.body.append(request.data);
@@ -190,7 +193,7 @@ void Recurse::http_parse(Request &request)
     for (int i = 0; i < data_list.size(); ++i) {
         if (is_body) {
             request.body.append(data_list.at(i));
-            request.body_length += request.body.size();
+            request.length += request.body.size();
             continue;
         }
 
@@ -211,9 +214,34 @@ void Recurse::http_parse(Request &request)
         request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
     }
 
+    if (request.header.contains("host"))
+        request.hostname = request.header["host"];
+
     qDebug() << "request object populated: "
         << request.method << request.url << request.header << request.proto << request.body
-        << request.body_length;
+        << request.hostname << request.ip
+        << request.length;
+
+    // extract cookies
+    // eg: USER_TOKEN=Yes;test=val
+    if (request.header.contains("cookie")) {
+        for(const QString &cookie : request.get("cookie").split(";")) {
+            int split = cookie.trimmed().indexOf("=");
+            if (split == -1)
+                continue;
+
+            QString key = cookie.left(split).trimmed();
+            if (!key.size())
+                continue;
+
+            QString value = cookie.mid(split + 1).trimmed();
+
+            request.cookies[key] = value;
+        }
+
+        qDebug() << "cookies:\n" << request.cookies << "\n";
+    }
+
 };
 
 //!
