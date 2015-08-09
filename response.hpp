@@ -1,10 +1,47 @@
 #ifndef RECURSE_RESPONSE_HPP
 #define RECURSE_RESPONSE_HPP
 
-struct Response {
-    QString body;
+#include <QHash>
+#include <QJsonDocument>
+#include <functional>
+
+class Response {
+
+public:
+
+    QString get(const QString &key) { return header[key]; };
+    Response &set(const QString &key, const QString &value) { header[key] = value; return *this; };
+
+    quint16 status() const { return m_status; };
+    Response &status(const quint16 &status) { m_status = status; return *this; };
+
+    QString type() const { return header["content-type"]; };
+    Response &type(const QString &type) { header["content-type"] = type; return *this; };
+
+    QString body() const { return m_body;};
+    Response &body(const QString &body) { m_body = body; return *this; };
+
+    Response &write(const QString msg) { m_body += msg; return *this; };
+
+    void send(const QString &body = "") {
+        if (body.size())
+            m_body = body;
+
+        end();
+    };
+
+    void send(const QJsonDocument &body = QJsonDocument()) {
+        type("application/json");
+        qDebug() << " body:" << body;
+        m_body = body.toJson(QJsonDocument::Compact);
+
+        end();
+    }
+
+    // final function set and called from recurse
+    std::function<void()> end;
+
     QHash<QString, QString> header;
-    quint16 status = 0;
     QString method, proto;
     QHash<quint16, QString> http_codes
     {
@@ -49,11 +86,10 @@ struct Response {
         {504, "Gateway Time-out"},
         {505, "HTTP Version not supported"}
     };
-    QHash<QString, QString> default_headers
-    {
-        {"content-length", ""},
-        {"content-type", "text/html; charset=utf-8"}
-    };
+
+private:
+    quint16 m_status = 0;
+    QString m_body;
 };
 
 #endif
