@@ -16,17 +16,26 @@ int main(int argc, char *argv[])
         next();
     });
 
+    // Second middleware, sets custom data
     app.use([](auto &req, auto &res, auto next) {
         qDebug() << "routed request" << req.header;
-        res.header["content-type"] = "application/json";
+
+        // custom data to be passed around - qvariant types
+        req.ctx.set("customdata", "value");
+
         next();
     });
 
     app.use([](auto &req, auto &res, auto next) {
         qDebug() << "last route" << req.header;
+
+        // custom header
         res.header["x-foo-data"] = "tvmid";
-        res.status = 200;
-        res.body = "hello";
+
+        // these are already default values
+        res.status(200).type("text/plain");
+
+        res.send("hello world");
     });
 
     qDebug() << "listening on port 3000...";
