@@ -11,19 +11,8 @@
 #include <QVector>
 #include <functional>
 
-using std::function;
-using std::bind;
-using std::ref;
-
 #include "request.hpp"
 #include "response.hpp"
-
-typedef function<void(Request &request, Response &response, function<void()> next)> next_f;
-
-struct Client {
-    Request request;
-    Response response;
-};
 
 //!
 //! \brief The Recurse class
@@ -31,8 +20,14 @@ struct Client {
 //!
 class Recurse : public QObject
 {
-public:
+    typedef std::function<void(Request &request, Response &response, std::function<void()> next)> next_f;
 
+    struct Client {
+        Request request;
+        Response response;
+    };
+
+public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
@@ -49,8 +44,6 @@ private:
     void http_parse(Request &request);
     QString create_reply(Response &response);
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
-
-    Client *client;
 
     void m_next(Client *client, int current_middleware);
 };
@@ -98,12 +91,12 @@ bool Recurse::listen(quint64 port, QHostAddress address)
                     return;
 
             if (m_middleware.count() > 0) {
-                client->response.end = bind(&Recurse::end, this, client);
+                client->response.end = std::bind(&Recurse::end, this, client);
 
                 m_middleware[0](
                     client->request,
                     client->response,
-                    bind(&Recurse::m_next, this, client, 0));
+                    std::bind(&Recurse::m_next, this, client, 0));
             }
         });
     });
@@ -126,7 +119,7 @@ void Recurse::m_next(Client *client, int current_middleware)
     m_middleware[current_middleware](
         client->request,
         client->response,
-        bind(&Recurse::m_next, this, client, current_middleware));
+        std::bind(&Recurse::m_next, this, client, current_middleware));
 };
 
 //!
