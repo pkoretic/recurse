@@ -9,7 +9,6 @@
 #include <QHash>
 #include <QStringBuilder>
 #include <QVector>
-#include <QSharedPointer>
 #include <functional>
 
 using std::function;
@@ -19,9 +18,12 @@ using std::ref;
 #include "request.hpp"
 #include "response.hpp"
 
-
 typedef function<void(Request &request, Response &response, function<void()> next)> next_f;
 
+struct Client {
+    Request request;
+    Response response;
+};
 
 //!
 //! \brief The Recurse class
@@ -36,7 +38,7 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
-    void end(Request &request, Response &response);
+    void end(Client *client);
 
 private:
     QCoreApplication app;
@@ -48,12 +50,9 @@ private:
     QString create_reply(Response &response);
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
-    struct Client {
-        Request request;
-        Response response;
-    };
+    Client *client;
 
-    void m_next(QSharedPointer<Client> client, int current_middleware);
+    void m_next(Client *client, int current_middleware);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -85,10 +84,11 @@ bool Recurse::listen(quint64 port, QHostAddress address)
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
 
-        QSharedPointer<Client> client = QSharedPointer<Client>::create();
+        auto client = new Client;
         client->request.socket = m_tcp_server.nextPendingConnection();
 
         connect(client->request.socket, &QTcpSocket::readyRead, [this, client] {
+
             client->request.data += client->request.socket->readAll();
             qDebug() << "client request: " << client->request.data;
 
@@ -98,7 +98,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
                     return;
 
             if (m_middleware.count() > 0) {
-                client->response.end = bind(&Recurse::end, this, std::ref(client->request), std::ref(client->response));
+                client->response.end = bind(&Recurse::end, this, client);
 
                 m_middleware[0](
                     client->request,
@@ -115,7 +115,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::m_next
 //! call next middleware
 //!
-void Recurse::m_next(QSharedPointer<Client> client, int current_middleware)
+void Recurse::m_next(Client *client, int current_middleware)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
 
@@ -146,11 +146,15 @@ void Recurse::use(next_f f)
 //! \param request
 //! \param response
 //!
-void Recurse::end(Request &request, Response &response)
+void Recurse::end(Client *client)
 {
-    qDebug() << "calling end with:" << response.body();
 
     QString header;
+
+    Request &request = client->request;
+    Response &response = client->response;
+
+    qDebug() << "calling end with:" << response.body();
 
     response.method = request.method;
     response.proto = request.proto;
@@ -169,6 +173,8 @@ void Recurse::end(Request &request, Response &response)
 
     qDebug() << "socket write debug:" << check;
     request.socket->close();
+
+    delete client;
 };
 
 //!
