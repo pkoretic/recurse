@@ -1,6 +1,8 @@
 # recurse
 Qt based micro web framework with middleware design
 
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurs/blob/master/LICENSE)
+
 # example
 
 ```
