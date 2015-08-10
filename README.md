@@ -11,13 +11,13 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // Start middleware
-    app.use([](auto &req, auto &res, auto next) {
-        qDebug() << "received a new request";
+    app.use([](auto &req, auto /* &res */, auto next) {
+        qDebug() << "received a new request:" << req.ip;
         next();
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &req, auto &res, auto next) {
+    app.use([](auto &req, auto /* &res */, auto next) {
         qDebug() << "routed request" << req.header;
 
         // custom data to be passed around - qvariant types
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
         next();
     });
 
-    app.use([](auto &req, auto &res, auto next) {
+    app.use([](auto &req, auto &res) {
         qDebug() << "last route" << req.header;
 
         // custom header
