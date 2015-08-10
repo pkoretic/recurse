@@ -16,13 +16,13 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // Start middleware, logger
-    app.use([](auto &req, auto &res, auto next) {
-        qDebug() << "received a new request";
+    app.use([](auto &req, auto /* &res */, auto next) {
+        qDebug() << "received a new request from:" << req.ip;
         next();
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &req, auto &res, auto next) {
+    app.use([](auto &req, auto /* &res */, auto next) {
         qDebug() << "routed request" << req.header;
 
         // custom data to be passed around - qvariant types
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     });
 
     // Final middleware, does long running action concurrently and sends reponse as json
-    app.use([](auto &req, auto &res, auto next) {
+    app.use([](auto &req, auto &res) {
         // show header and our custom data
         qDebug() << "last route" << req.header << " " << req.ctx.get("customdata");
 
