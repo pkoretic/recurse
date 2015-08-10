@@ -21,7 +21,7 @@
 class Recurse : public QObject
 {
     typedef std::function<void()> void_f;
-    typedef std::function<void(Request &request, Response &response __attribute__((unused)), void_f next)> next_f;
+    typedef std::function<void(Request &request, Response &response, void_f next)> next_f;
     typedef std::function<void(Request &request, Response &response)> final_f;
 
     struct Client {
