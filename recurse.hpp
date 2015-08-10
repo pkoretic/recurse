@@ -20,7 +20,9 @@
 //!
 class Recurse : public QObject
 {
-    typedef std::function<void(Request &request, Response &response, std::function<void()> next)> next_f;
+    typedef std::function<void()> void_f;
+    typedef std::function<void(Request &request, Response &response __attribute__((unused)), void_f next)> next_f;
+    typedef std::function<void(Request &request, Response &response)> final_f;
 
     struct Client {
         Request request;
@@ -33,6 +35,7 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
+    void use(final_f next);
     void end(Client *client);
 
 private:
@@ -131,6 +134,11 @@ void Recurse::m_next(Client *client, int current_middleware)
 void Recurse::use(next_f f)
 {
     m_middleware.push_back(f);
+};
+
+void Recurse::use(final_f f)
+{
+    m_middleware.push_back([g = std::move(f)](Request &request, Response &response,  void_f /* unused */){ g(request, response); });
 };
 
 //!
