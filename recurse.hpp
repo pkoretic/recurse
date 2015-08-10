@@ -11,19 +11,8 @@
 #include <QVector>
 #include <functional>
 
-using std::function;
-using std::bind;
-using std::ref;
-
 #include "request.hpp"
 #include "response.hpp"
-
-typedef function<void(Request &request, Response &response, function<void()> next)> next_f;
-
-struct Client {
-    Request request;
-    Response response;
-};
 
 //!
 //! \brief The Recurse class
@@ -31,8 +20,14 @@ struct Client {
 //!
 class Recurse : public QObject
 {
-public:
+    typedef std::function<void(Request &request, Response &response, std::function<void()> next)> next_f;
 
+    struct Client {
+        Request request;
+        Response response;
+    };
+
+public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
@@ -49,8 +44,6 @@ private:
     void http_parse(Request &request);
     QString create_reply(Response &response);
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
-
-    Client *client;
 
     void m_next(Client *client, int current_middleware);
 };
@@ -94,16 +87,16 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
             http_parse(client->request);
 
-            if (client->request.body_length < client->request.header["content-length"].toLongLong())
+            if (client->request.length < client->request.header["content-length"].toLongLong())
                     return;
 
             if (m_middleware.count() > 0) {
-                client->response.end = bind(&Recurse::end, this, client);
+                client->response.end = std::bind(&Recurse::end, this, client);
 
                 m_middleware[0](
                     client->request,
                     client->response,
-                    bind(&Recurse::m_next, this, client, 0));
+                    std::bind(&Recurse::m_next, this, client, 0));
             }
         });
     });
@@ -126,7 +119,7 @@ void Recurse::m_next(Client *client, int current_middleware)
     m_middleware[current_middleware](
         client->request,
         client->response,
-        bind(&Recurse::m_next, this, client, current_middleware));
+        std::bind(&Recurse::m_next, this, client, current_middleware));
 };
 
 //!
@@ -185,6 +178,9 @@ void Recurse::end(Client *client)
 //!
 void Recurse::http_parse(Request &request)
 {
+    // Save client ip address
+    request.ip = request.socket->peerAddress();
+
     // if no header is present, just append all data to request.body
     if (!request.data.contains(httpRx)) {
         request.body.append(request.data);
@@ -197,7 +193,7 @@ void Recurse::http_parse(Request &request)
     for (int i = 0; i < data_list.size(); ++i) {
         if (is_body) {
             request.body.append(data_list.at(i));
-            request.body_length += request.body.size();
+            request.length += request.body.size();
             continue;
         }
 
@@ -218,9 +214,34 @@ void Recurse::http_parse(Request &request)
         request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
     }
 
+    if (request.header.contains("host"))
+        request.hostname = request.header["host"];
+
     qDebug() << "request object populated: "
         << request.method << request.url << request.header << request.proto << request.body
-        << request.body_length;
+        << request.hostname << request.ip
+        << request.length;
+
+    // extract cookies
+    // eg: USER_TOKEN=Yes;test=val
+    if (request.header.contains("cookie")) {
+        for(const QString &cookie : request.get("cookie").split(";")) {
+            int split = cookie.trimmed().indexOf("=");
+            if (split == -1)
+                continue;
+
+            QString key = cookie.left(split).trimmed();
+            if (!key.size())
+                continue;
+
+            QString value = cookie.mid(split + 1).trimmed();
+
+            request.cookies[key] = value;
+        }
+
+        qDebug() << "cookies:\n" << request.cookies << "\n";
+    }
+
 };
 
 //!
