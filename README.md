@@ -12,35 +12,60 @@ int main(int argc, char *argv[])
 {
     Recurse app(argc, argv);
 
-    // Start middleware
-    app.use([](auto &req, auto /* &res */, auto next) {
-        qDebug() << "received a new request:" << req.ip;
+    // Start middleware, logger
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "received a new request from:" << ctx.request.ip;
         next();
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &req, auto /* &res */, auto next) {
-        qDebug() << "routed request" << req.header;
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "routed request" << ctx.request.header;
 
         // custom data to be passed around - qvariant types
-        req.ctx.set("customdata", "value");
+        ctx.set("customdata", "value");
+
+        // for any kind of data use
+        // ctx.data["key"] = *void
 
         next();
     });
 
-    app.use([](auto &req, auto &res) {
-        qDebug() << "last route" << req.header;
+    // Final middleware, does long running action concurrently and sends response as json
+    app.use([](auto &ctx) {
+        auto &res = ctx.response;
+        auto &req = ctx.request;
 
-        // custom header
+        // show header and our custom data
+        qDebug() << "last route" << req.header << " " << ctx.get("customdata");
+
+        // set custom header
         res.header["x-foo-data"] = "tvmid";
 
         // these are already default values
+        // text/plain will be overriden by send if json is wanted
         res.status(200).type("text/plain");
 
-        res.send("hello world");
+        // some long running action in new thread pool
+        auto future = QtConcurrent::run([]{
+           qDebug() << "long running action...";
+
+           // return our demo result
+           return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
+        });
+
+        auto watcher = new QFutureWatcher<QJsonDocument>;
+        QObject::connect(watcher, &QFutureWatcher<QJsonDocument>::finished,[&res, future]() {
+            qDebug() << "long running action done";
+
+            // send our demo result
+            res.send(future.result());
+        });
+        watcher->setFuture(future);
+
     });
 
-    qDebug() << "listening on port 3000...";
+    qDebug() << "starting on port 3000...";
     app.listen(3000);
 }
 ```

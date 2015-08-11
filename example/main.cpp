@@ -16,28 +16,31 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // Start middleware, logger
-    app.use([](auto &req, auto /* &res */, auto next) {
-        qDebug() << "received a new request from:" << req.ip;
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "received a new request from:" << ctx.request.ip;
         next();
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &req, auto /* &res */, auto next) {
-        qDebug() << "routed request" << req.header;
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "routed request" << ctx.request.header;
 
         // custom data to be passed around - qvariant types
-        req.ctx.set("customdata", "value");
+        ctx.set("customdata", "value");
 
         // for any kind of data use
-        // req.ctx.data["key"] = *void
+        // ctx.data["key"] = *void
 
         next();
     });
 
     // Final middleware, does long running action concurrently and sends response as json
-    app.use([](auto &req, auto &res) {
+    app.use([](auto &ctx) {
+        auto &res = ctx.response;
+        auto &req = ctx.request;
+
         // show header and our custom data
-        qDebug() << "last route" << req.header << " " << req.ctx.get("customdata");
+        qDebug() << "last route" << req.header << " " << ctx.get("customdata");
 
         // set custom header
         res.header["x-foo-data"] = "tvmid";
@@ -65,6 +68,6 @@ int main(int argc, char *argv[])
 
     });
 
-    qDebug() << "listening on port 3000...";
+    qDebug() << "starting on port 3000...";
     app.listen(3000);
 }
