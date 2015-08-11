@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
         next();
     });
 
-    // Final middleware, does long running action concurrently and sends reponse as json
+    // Final middleware, does long running action concurrently and sends response as json
     app.use([](auto &req, auto &res) {
         // show header and our custom data
         qDebug() << "last route" << req.header << " " << req.ctx.get("customdata");
