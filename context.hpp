@@ -4,8 +4,15 @@
 #include <QVariant>
 #include <QHash>
 
+#include "request.hpp"
+#include "response.hpp"
+
 class Context {
+
 public:
+
+    Request request;
+    Response response;
 
     // allow passing any type of QVariant
     Context &set(const QString &key, const QVariant &value) {  m_data[key] = value; return *this; };

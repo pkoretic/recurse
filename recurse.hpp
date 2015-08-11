@@ -13,6 +13,7 @@
 
 #include "request.hpp"
 #include "response.hpp"
+#include "context.hpp"
 
 //!
 //! \brief The Recurse class
@@ -21,13 +22,8 @@
 class Recurse : public QObject
 {
     typedef std::function<void()> void_f;
-    typedef std::function<void(Request &request, Response &response, void_f next)> next_f;
-    typedef std::function<void(Request &request, Response &response)> final_f;
-
-    struct Client {
-        Request request;
-        Response response;
-    };
+    typedef std::function<void(Context &ctx, void_f next)> next_f;
+    typedef std::function<void(Context &ctx)> final_f;
 
 public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
@@ -36,7 +32,7 @@ public:
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
     void use(final_f next);
-    void end(Client *client);
+    void end(Context *ctx);
 
 private:
     QCoreApplication app;
@@ -48,7 +44,7 @@ private:
     QString create_reply(Response &response);
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
-    void m_next(Client *client, int current_middleware);
+    void m_next(Context *ctx, int current_middleware);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -80,26 +76,23 @@ bool Recurse::listen(quint64 port, QHostAddress address)
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
 
-        auto client = new Client;
-        client->request.socket = m_tcp_server.nextPendingConnection();
+        auto ctx= new Context;
+        ctx->request.socket = m_tcp_server.nextPendingConnection();
 
-        connect(client->request.socket, &QTcpSocket::readyRead, [this, client] {
+        connect(ctx->request.socket, &QTcpSocket::readyRead, [this, ctx] {
 
-            client->request.data += client->request.socket->readAll();
-            qDebug() << "client request: " << client->request.data;
+            ctx->request.data += ctx->request.socket->readAll();
+            qDebug() << "ctx request: " << ctx->request.data;
 
-            http_parse(client->request);
+            http_parse(ctx->request);
 
-            if (client->request.length < client->request.header["content-length"].toLongLong())
+            if (ctx->request.length < ctx->request.header["content-length"].toLongLong())
                     return;
 
             if (m_middleware.count() > 0) {
-                client->response.end = std::bind(&Recurse::end, this, client);
+                ctx->response.end = std::bind(&Recurse::end, this, ctx);
 
-                m_middleware[0](
-                    client->request,
-                    client->response,
-                    std::bind(&Recurse::m_next, this, client, 0));
+                m_middleware[0]( *ctx, std::bind(&Recurse::m_next, this, ctx, 0) );
             }
         });
     });
@@ -111,7 +104,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::m_next
 //! call next middleware
 //!
-void Recurse::m_next(Client *client, int current_middleware)
+void Recurse::m_next(Context *ctx, int current_middleware)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
 
@@ -119,10 +112,7 @@ void Recurse::m_next(Client *client, int current_middleware)
         return;
     };
 
-    m_middleware[current_middleware](
-        client->request,
-        client->response,
-        std::bind(&Recurse::m_next, this, client, current_middleware));
+    m_middleware[current_middleware]( *ctx, std::bind(&Recurse::m_next, this, ctx, current_middleware) );
 };
 
 //!
@@ -131,6 +121,8 @@ void Recurse::m_next(Client *client, int current_middleware)
 //!
 //! \param f middleware function that will be called later
 //!
+//!
+//!
 void Recurse::use(next_f f)
 {
     m_middleware.push_back(f);
@@ -138,7 +130,9 @@ void Recurse::use(next_f f)
 
 void Recurse::use(final_f f)
 {
-    m_middleware.push_back([g = std::move(f)](Request &request, Response &response,  void_f /* unused */){ g(request, response); });
+    m_middleware.push_back([f](Context &ctx,  void_f /* next */) {
+        f(ctx);
+    });
 };
 
 //!
@@ -147,13 +141,12 @@ void Recurse::use(final_f f)
 //! \param request
 //! \param response
 //!
-void Recurse::end(Client *client)
+void Recurse::end(Context *ctx)
 {
-
     QString header;
 
-    Request &request = client->request;
-    Response &response = client->response;
+    Request &request = ctx->request;
+    Response &response = ctx->response;
 
     qDebug() << "calling end with:" << response.body();
 
@@ -175,7 +168,7 @@ void Recurse::end(Client *client)
     qDebug() << "socket write debug:" << check;
     request.socket->close();
 
-    delete client;
+    delete ctx;
 };
 
 //!

@@ -4,8 +4,6 @@
 #include <QTcpSocket>
 #include <QHash>
 
-#include "context.hpp"
-
 struct Request {
     QString data;
     QTcpSocket *socket;
@@ -68,12 +66,6 @@ struct Request {
     //! Http hostname from "Host" http header
     //!
     QString hostname;
-
-    //!
-    //! \brief ctx
-    //! Context that we can pass around and reuse
-    //!
-    Context ctx;
 
     //!
     //! \brief get
