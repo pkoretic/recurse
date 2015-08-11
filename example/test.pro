@@ -12,3 +12,7 @@ TEMPLATE = app
 SOURCES += main.cpp
 
 QMAKE_CXXFLAGS += -std=c++14
+
+macx {
+    QMAKE_CXXFLAGS += -stdlib=libc++
+}
