@@ -268,8 +268,7 @@ QString Recurse::create_reply(Response &response)
         response.header["content-type"] = "text/plain";
 
     // set custom header fields
-    QHash<QString, QString>::const_iterator i;
-    for (i = response.header.constBegin(); i != response.header.constEnd(); ++i)
+    for (auto i = response.header.constBegin(); i != response.header.constEnd(); ++i)
         data += i.key() % ": " % i.value() % "\r\n";
 
     return data % "\r\n" % response.body() % "\r\n";
