@@ -1,71 +1,40 @@
 # recurse
-Qt based micro web framework with middleware design
+
+Recurse is set to be modern micro web framework written in latest C++14 using
+Qt library leveraging all the best features of both worlds.  We strongly
+emphasize on writing a clean and easy to understand code and avoid using
+templates to encourage contributions.
+
+Recurse aims to be small with no middlewares bundled in the core. This should
+allow it to be very robust for writing next generation web applications and
+APIs.
+
 
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
-# example
+# Example
+
 
 ```
-#include "../recurse.hpp"
+#include "recurse.hpp"
 
 int main(int argc, char *argv[])
 {
     Recurse app(argc, argv);
 
-    // Start middleware, logger
+    // logger
     app.use([](auto &ctx, auto next) {
-        qDebug() << "received a new request from:" << ctx.request.ip;
+        qDebug() << ctx.request.ip;
         next();
     });
 
-    // Second middleware, sets custom data
-    app.use([](auto &ctx, auto next) {
-        qDebug() << "routed request" << ctx.request.header;
-
-        // custom data to be passed around - qvariant types
-        ctx.set("customdata", "value");
-
-        // for any kind of data use
-        // ctx.data["key"] = *void
-
-        next();
-    });
-
-    // Final middleware, does long running action concurrently and sends response as json
+    // hello world
     app.use([](auto &ctx) {
-        auto &res = ctx.response;
-        auto &req = ctx.request;
-
-        // show header and our custom data
-        qDebug() << "last route" << req.header << " " << ctx.get("customdata");
-
-        // set custom header
-        res.header["x-foo-data"] = "tvmid";
-
-        // these are already default values
-        // text/plain will be overriden by send if json is wanted
-        res.status(200).type("text/plain");
-
-        // some long running action in new thread pool
-        auto future = QtConcurrent::run([]{
-           qDebug() << "long running action...";
-
-           // return our demo result
-           return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
-        });
-
-        auto watcher = new QFutureWatcher<QJsonDocument>;
-        QObject::connect(watcher, &QFutureWatcher<QJsonDocument>::finished,[&res, future]() {
-            qDebug() << "long running action done";
-
-            // send our demo result
-            res.send(future.result());
-        });
-        watcher->setFuture(future);
-
+        ctx.response.send("Hello world");
     });
 
-    qDebug() << "starting on port 3000...";
+
     app.listen(3000);
 }
+
 ```
