@@ -31,6 +31,7 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
+    void use(QVector<next_f> nexts);
     void use(final_f next);
     void end(Context *ctx);
 
@@ -128,6 +129,27 @@ void Recurse::use(next_f f)
     m_middleware.push_back(f);
 };
 
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! add multiple middlewares
+//! very useful for third party modules
+//!
+//! \param f vector of middlewares
+//!
+void Recurse::use(QVector<next_f> f)
+{
+    for(const auto &g : f)
+        m_middleware.push_back(g);
+};
+
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! final middleware that doesn't call next, used for returning response
+//!
+//! \param f final middleware function that will be called last
+//!
 void Recurse::use(final_f f)
 {
     m_middleware.push_back([f](Context &ctx,  void_f /* next */) {
