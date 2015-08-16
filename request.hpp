@@ -8,7 +8,16 @@ class Request {
 
 public:
 
+    //!
+    //! \brief data
+    //! client request buffer data
+    //!
     QString data;
+
+    //!
+    //! \brief socket
+    //! underlying client socket
+    //!
     QTcpSocket *socket;
 
     //!
@@ -96,7 +105,7 @@ private:
 
 bool Request::parse(QString request)
 {
-    // chunked encoding
+    // buffer all data
     this->data += request;
 
     // Save client ip address
