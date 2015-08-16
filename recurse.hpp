@@ -41,9 +41,7 @@ private:
 
     quint64 m_port;
     QVector<next_f> m_middleware;
-    void http_parse(Request &request);
     QString create_reply(Response &response);
-    QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
     void m_next(Context *ctx, int current_middleware);
 };
@@ -82,10 +80,10 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
         connect(ctx->request.socket, &QTcpSocket::readyRead, [this, ctx] {
 
-            ctx->request.data += ctx->request.socket->readAll();
-            qDebug() << "ctx request: " << ctx->request.data;
+            QString data(ctx->request.socket->readAll());
+            qDebug() << "ctx request: " << data;
 
-            http_parse(ctx->request);
+            ctx->request.parse(data);
 
             if (ctx->request.length < ctx->request.header["content-length"].toLongLong())
                     return;
@@ -191,80 +189,6 @@ void Recurse::end(Context *ctx)
     request.socket->close();
 
     delete ctx;
-};
-
-//!
-//! \brief Recurse::http_parse
-//! parse http data
-//!
-//! \param data reference to data received from the tcp connection
-//!
-void Recurse::http_parse(Request &request)
-{
-    // Save client ip address
-    request.ip = request.socket->peerAddress();
-
-    // if no header is present, just append all data to request.body
-    if (!request.data.contains(httpRx)) {
-        request.body.append(request.data);
-        return;
-    }
-
-    QStringList data_list = request.data.split("\r\n");
-    bool is_body = false;
-
-    for (int i = 0; i < data_list.size(); ++i) {
-        if (is_body) {
-            request.body.append(data_list.at(i));
-            request.length += request.body.size();
-            continue;
-        }
-
-        QStringList entity_item = data_list.at(i).split(":");
-
-        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body) {
-            is_body = true;
-            continue;
-        }
-        else if (i == 0 && entity_item.length() < 2) {
-            QStringList first_line = entity_item.at(0).split(" ");
-            request.method = first_line.at(0);
-            request.url = first_line.at(1).trimmed();
-            request.proto = first_line.at(2).trimmed();
-            continue;
-        }
-
-        request.header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed();
-    }
-
-    if (request.header.contains("host"))
-        request.hostname = request.header["host"];
-
-    qDebug() << "request object populated: "
-        << request.method << request.url << request.header << request.proto << request.body
-        << request.hostname << request.ip
-        << request.length;
-
-    // extract cookies
-    // eg: USER_TOKEN=Yes;test=val
-    if (request.header.contains("cookie")) {
-        for(const QString &cookie : request.get("cookie").split(";")) {
-            int split = cookie.trimmed().indexOf("=");
-            if (split == -1)
-                continue;
-
-            QString key = cookie.left(split).trimmed();
-            if (!key.size())
-                continue;
-
-            QString value = cookie.mid(split + 1).trimmed();
-
-            request.cookies[key] = value;
-        }
-
-        qDebug() << "cookies:\n" << request.cookies << "\n";
-    }
-
 };
 
 //!
