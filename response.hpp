@@ -13,7 +13,7 @@ public:
     Response &set(const QString &key, const QString &value) { header[key] = value; return *this; };
 
     quint16 status() const { return m_status; };
-    Response &status(const quint16 &status) { m_status = status; return *this; };
+    Response &status(quint16 status) { m_status = status; return *this; };
 
     QString type() const { return header["content-type"]; };
     Response &type(const QString &type) { header["content-type"] = type; return *this; };
@@ -21,7 +21,7 @@ public:
     QString body() const { return m_body;};
     Response &body(const QString &body) { m_body = body; return *this; };
 
-    Response &write(const QString msg) { m_body += msg; return *this; };
+    Response &write(const QString &msg) { m_body += msg; return *this; };
 
     void send(const QString &body = "") {
         if (body.size())
@@ -43,6 +43,7 @@ public:
 
     QHash<QString, QString> header;
     QString method, protocol;
+
     QHash<quint16, QString> http_codes
     {
         {100, "Continue"},
