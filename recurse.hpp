@@ -41,7 +41,6 @@ private:
 
     quint64 m_port;
     QVector<next_f> m_middleware;
-    QString create_reply(Response &response);
 
     void m_next(Context *ctx, int current_middleware);
 };
@@ -163,27 +162,18 @@ void Recurse::use(final_f f)
 //!
 void Recurse::end(Context *ctx)
 {
-    QString header;
-
     Request &request = ctx->request;
     Response &response = ctx->response;
 
     qDebug() << "calling end with:" << response.body();
 
     response.method = request.method;
-    response.proto = request.proto;
+    response.protocol = request.protocol;
 
-    if (response.status() == 0)
-        response.status(200);
-
-    QString reply = create_reply(response);
-
-    qDebug() << "create reply" << reply;
+    QString reply = response.create_reply();
 
     // send response to the client
-    qint64 check = request.socket->write(
-                reply.toStdString().c_str(),
-                reply.size());
+    qint64 check = request.socket->write(reply.toUtf8());
 
     qDebug() << "socket write debug:" << check;
     request.socket->close();
@@ -191,33 +181,5 @@ void Recurse::end(Context *ctx)
     delete ctx;
 };
 
-//!
-//! \brief Recurse::create_reply
-//! create response data for sending to client
-//!
-//! \param response reference to the Response instance
-//!
-QString Recurse::create_reply(Response &response)
-{
-    qDebug() << "response.header:" << response.header;
-
-    qDebug() << __FUNCTION__ << response.body();
-
-    QString data = response.proto % " " % QString::number(response.status()) % " "
-        % response.http_codes[response.status()] % "\r\n";
-
-    // set content length
-    response.header["content-length"] = QString::number(response.body().size());
-
-    // set content type if not set
-    if (!response.header.contains("content-type"))
-        response.header["content-type"] = "text/plain";
-
-    // set custom header fields
-    for (auto i = response.header.constBegin(); i != response.header.constEnd(); ++i)
-        data += i.key() % ": " % i.value() % "\r\n";
-
-    return data % "\r\n" % response.body() % "\r\n";
-}
 
 #endif // RECURSE_HPP

@@ -35,10 +35,10 @@ public:
     QString method;
 
     //!
-    //! \brief proto
+    //! \brief protocol
     //! Http protocol, eg: HTTP
     //!
-    QString proto;
+    QString protocol;
 
     //!
     //! \brief url
@@ -128,7 +128,7 @@ bool Request::parse(QString request)
             QStringList first_line = entity_item.at(0).split(" ");
             this->method = first_line.at(0);
             this->url = first_line.at(1).trimmed();
-            this->proto = first_line.at(2).trimmed();
+            this->protocol = first_line.at(2).trimmed();
             continue;
         }
 
@@ -139,7 +139,7 @@ bool Request::parse(QString request)
         this->hostname = this->header["host"];
 
     qDebug() << "this->object populated: "
-        << this->method << this->url << this->header << this->proto << this->body
+        << this->method << this->url << this->header << this->protocol << this->body
         << this->hostname << this->ip
         << this->length;
 

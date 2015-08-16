@@ -42,7 +42,7 @@ public:
     std::function<void()> end;
 
     QHash<QString, QString> header;
-    QString method, proto;
+    QString method, protocol;
     QHash<quint16, QString> http_codes
     {
         {100, "Continue"},
@@ -87,9 +87,46 @@ public:
         {505, "HTTP Version not supported"}
     };
 
+    //!
+    //! \brief create_reply
+    //! create reply for sending to client
+    //!
+    //! \return QString reply to be sent
+    //!
+    QString create_reply();
+
 private:
-    quint16 m_status = 0;
+    quint16 m_status = 200;
     QString m_body;
+};
+
+// https://tools.ietf.org/html/rfc7230#page-19
+QString Response::create_reply()
+{
+    qDebug() << __FUNCTION__ << this->body();
+
+    qDebug() << "response header:" << this->header;
+
+    QString reply = this->protocol % " " % QString::number(this->status()) % " "
+        % this->http_codes[this->status()] % "\r\n";
+
+    // set content length
+    this->header["content-length"] = QString::number(this->body().size());
+
+    // set content type if not set
+    if (!this->header.contains("content-type"))
+        this->header["content-type"] = "text/plain";
+
+    // set custom header fields
+    for (auto i = this->header.constBegin(); i != this->header.constEnd(); ++i)
+        reply = reply % i.key() % ": " % i.value() % "\r\n";
+
+    reply += "\r\n";
+
+    if (this->body().size())
+        reply += this->body();
+
+    return reply;
 };
 
 #endif
