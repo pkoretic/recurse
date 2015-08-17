@@ -60,10 +60,15 @@ macx {
 }
 ```
 
-build and run
+build, run and use
 ```
+# build
 qmake main.pro
+make
+
+# run
 ./example
 
+# use
 curl http://127.0.0.1:3000
 Hello world
