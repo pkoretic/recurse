@@ -62,7 +62,7 @@ macx {
 
 build and run
 ```
-qmake .
+qmake main.pro
 ./example
 
 curl http://127.0.0.1:3000
