@@ -14,7 +14,7 @@ APIs.
 
 # Example
 
-
+main.cpp
 ```
 #include "recurse.hpp"
 
@@ -38,3 +38,32 @@ int main(int argc, char *argv[])
 }
 
 ```
+main.pro
+```
+TARGET = example
+
+QT       += core network
+QT       -= gui
+
+CONFIG   += console
+CONFIG   += c++14
+CONFIG   -= app_bundle
+
+TEMPLATE = app
+
+SOURCES += main.cpp
+
+QMAKE_CXXFLAGS += -std=c++14
+
+macx {
+    QMAKE_CXXFLAGS += -stdlib=libc++
+}
+```
+
+build and run
+```
+qmake .
+./example
+
+curl http://127.0.0.1:3000
+Hello world
