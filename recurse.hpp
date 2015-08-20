@@ -84,7 +84,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 
             ctx->request.parse(data);
 
-            if (ctx->request.length < ctx->request.header["content-length"].toLongLong())
+            if (ctx->request.length < ctx->request.get("content-length").toLongLong())
                 return;
 
             if (m_middleware.count() > 0) {

@@ -16,7 +16,7 @@ public:
     //! \param QString case-insensitive key of the header
     //! \return QString header
     //!
-    QString get(const QString &key) { return header[key.toLower()]; };
+    QString get(const QString &key) { return m_header[key.toLower()]; };
 
     //!
     //! \brief set
@@ -26,7 +26,7 @@ public:
     //! \param QString value for the header
     //! \return Response chainable
     //!
-    Response &set(const QString &key, const QString &value) { header[key.toLower()] = value.toLower(); return *this; };
+    Response &set(const QString &key, const QString &value) { m_header[key.toLower()] = value.toLower(); return *this; };
 
     //!
     //! \brief status
@@ -51,7 +51,7 @@ public:
     //!
     //! \return QString MIME content-type
     //!
-    QString type() const { return header["content-type"]; };
+    QString type() const { return m_header["content-type"]; };
 
     //!
     //! \brief type
@@ -60,7 +60,7 @@ public:
     //! \param QString MIME type
     //! \return Response chainable
     //!
-    Response &type(const QString &type) { header["content-type"] = type; return *this; };
+    Response &type(const QString &type) { m_header["content-type"] = type.toLower(); return *this; };
 
     //!
     //! \brief body
@@ -121,12 +121,6 @@ public:
     //! ctx->response.end = std::bind(&Recurse::end, this, ctx);
     //!
     std::function<void()> end;
-
-    //!
-    //! \brief header
-    //! holds all header data as key/value
-    //!
-    QHash<QString, QString> header;
 
     //!
     //! \brief method
@@ -203,10 +197,17 @@ private:
     quint16 m_status = 200;
 
     //!
+    //! \brief header
+    //! holds all header data as key/value
+    //!
+
+    QHash<QString, QString> m_header;
+    //!
     //! \brief m_body
     //! HTTP response content
     //!
     QString m_body;
+
 };
 
 // https://tools.ietf.org/html/rfc7230#page-19
@@ -214,20 +215,20 @@ QString Response::create_reply()
 {
     qDebug() << __FUNCTION__ << this->body();
 
-    qDebug() << "response header:" << this->header;
+    qDebug() << "response header:" << m_header;
 
     QString reply = this->protocol % " " % QString::number(this->status()) % " "
         % this->http_codes[this->status()] % "\r\n";
 
     // set content length
-    this->header["content-length"] = QString::number(this->body().size());
+    m_header["content-length"] = QString::number(this->body().size());
 
     // set content type if not set
-    if (!this->header.contains("content-type"))
-        this->header["content-type"] = "text/plain";
+    if (!m_header.contains("content-type"))
+        m_header["content-type"] = "text/plain";
 
     // set custom header fields
-    for (auto i = this->header.constBegin(); i != this->header.constEnd(); ++i)
+    for (auto i = m_header.constBegin(); i != m_header.constEnd(); ++i)
         reply = reply % i.key() % ": " % i.value() % "\r\n";
 
     reply += "\r\n";
