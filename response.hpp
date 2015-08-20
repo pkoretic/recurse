@@ -9,20 +9,91 @@ class Response {
 
 public:
 
-    QString get(const QString &key) { return header[key]; };
-    Response &set(const QString &key, const QString &value) { header[key] = value; return *this; };
+    //!
+    //! \brief get
+    //! Returns the HTTP response header specified by key
+    //!
+    //! \param QString case-insensitive key of the header
+    //! \return QString header
+    //!
+    QString get(const QString &key) { return header[key.toLower()]; };
 
+    //!
+    //! \brief set
+    //! Sets the response HTTP header to value.
+    //!
+    //! \param QString key of the header
+    //! \param QString value for the header
+    //! \return Response chainable
+    //!
+    Response &set(const QString &key, const QString &value) { header[key.toLower()] = value.toLower(); return *this; };
+
+    //!
+    //! \brief status
+    //! Get HTTP response status
+    //!
+    //! \return quint16 status
+    //!
     quint16 status() const { return m_status; };
+
+    //!
+    //! \brief status
+    //! Set HTTP response status
+    //!
+    //! \param quint16 status
+    //! \return Response chainable
+    //!
     Response &status(quint16 status) { m_status = status; return *this; };
 
+    //!
+    //! \brief type
+    //! Get the Content-Type HTTP header
+    //!
+    //! \return QString MIME content-type
+    //!
     QString type() const { return header["content-type"]; };
+
+    //!
+    //! \brief type
+    //! Sets Content-Type HTTP header
+    //!
+    //! \param QString MIME type
+    //! \return Response chainable
+    //!
     Response &type(const QString &type) { header["content-type"] = type; return *this; };
 
+    //!
+    //! \brief body
+    //! Get current response body data content, useful for upstream middleware
+    //!
+    //! \return QString response content
+    //!
     QString body() const { return m_body;};
+
+    //!
+    //! \brief body
+    //! Set response content, overrides existing
+    //!
+    //! \param QString body
+    //! \return  Response chainable
+    //!
     Response &body(const QString &body) { m_body = body; return *this; };
 
-    Response &write(const QString &msg) { m_body += msg; return *this; };
+    //!
+    //! \brief write
+    //! Appends data to existing content (set by write() or body())
+    //!
+    //! \param QString data to be added
+    //! \return Response chainable
+    //!
+    Response &write(const QString &data) { m_body += data; return *this; };
 
+    //!
+    //! \brief send
+    //! Sends actual data to client
+    //!
+    //! \param QString body optional, if provided this is sent instead of current data in buffer
+    //!
     void send(const QString &body = "") {
         if (body.size())
             m_body = body;
@@ -30,20 +101,48 @@ public:
         end();
     };
 
+    //!
+    //! \brief send
+    //! Overloaded function, allows sending QJsonDocument
+    //!
+    //! \param body
+    //!
     void send(const QJsonDocument &body) {
         type("application/json");
-        qDebug() << " body:" << body;
         m_body = body.toJson(QJsonDocument::Compact);
 
         end();
     }
 
-    // final function set and called from recurse
+    //!
+    //! \brief end
+    //! final function responsible for sending data
+    //! this is bound to Recurse::end function, from recurse.hpp
+    //! ctx->response.end = std::bind(&Recurse::end, this, ctx);
+    //!
     std::function<void()> end;
 
+    //!
+    //! \brief header
+    //! holds all header data as key/value
+    //!
     QHash<QString, QString> header;
-    QString method, protocol;
 
+    //!
+    //! \brief method
+    //! Response method, eg: GET
+    //!
+    QString method;
+
+    //!
+    //! \brief protocol
+    //! Response protocol, eg: HTTP
+    //!
+    QString protocol;
+
+    //!
+    //! \brief http codes
+    //!
     QHash<quint16, QString> http_codes
     {
         {100, "Continue"},
@@ -97,7 +196,16 @@ public:
     QString create_reply();
 
 private:
+    //!
+    //! \brief m_status
+    //! HTTP response status
+    //!
     quint16 m_status = 200;
+
+    //!
+    //! \brief m_body
+    //! HTTP response content
+    //!
     QString m_body;
 };
 

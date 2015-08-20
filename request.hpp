@@ -22,7 +22,7 @@ public:
 
     //!
     //! \brief header
-    //! Http request headers, eg: header["content-type"] = "text/plain"
+    //! HTTP request headers, eg: header["content-type"] = "text/plain"
     //!
     QHash<QString, QString> header;
 
@@ -39,25 +39,25 @@ public:
 
     //!
     //! \brief method
-    //! Http method, eg: GET
+    //! HTTP method, eg: GET
     //!
     QString method;
 
     //!
     //! \brief protocol
-    //! Http protocol, eg: HTTP
+    //! Request protocol, eg: HTTP
     //!
     QString protocol;
 
     //!
     //! \brief url
-    //! Http request url, eg: /helloworld
+    //! HTTP request url, eg: /helloworld
     //!
     QString url;
 
     //!
     //! \brief length
-    //! Http request Content-Length
+    //! HTTP request Content-Length
     //!
     qint64 length = 0;
 
@@ -69,31 +69,31 @@ public:
 
     //!
     //! \brief cookies
-    //! Http cookies in key/value form
+    //! HTTP cookies in key/value form
     //!
     QHash<QString, QString> cookies;
 
     //!
     //! \brief hostname
-    //! Http hostname from "Host" http header
+    //! HTTP hostname from "Host" HTTP header
     //!
     QString hostname;
 
     //!
     //! \brief get
-    //! Return http request header
+    //! Return HTTP request header specified by the key
     //!
-    //! \param key of the header
-    //! \return header value
+    //! \param QString case-insensitive key of the header
+    //! \return QString header value
     //!
-    QString get(const QString &key) { return header[key]; };
+    QString get(const QString &key) { return header[key.toLower()]; };
 
 
     //!
     //! \brief parse
     //! parse data from request
     //!
-    //! \param request
+    //! \param QString request
     //! \return true on success, false otherwise, considered bad request
     //!
     bool parse(QString request);
