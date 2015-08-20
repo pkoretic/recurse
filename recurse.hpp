@@ -85,7 +85,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             ctx->request.parse(data);
 
             if (ctx->request.length < ctx->request.header["content-length"].toLongLong())
-                    return;
+                return;
 
             if (m_middleware.count() > 0) {
                 ctx->response.end = std::bind(&Recurse::end, this, ctx);
