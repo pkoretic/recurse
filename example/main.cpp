@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     // Second middleware, sets custom data
     app.use([](auto &ctx, auto next) {
-        qDebug() << "routed request" << ctx.request.header;
+        qDebug() << "routed request:" << ctx.request.get("user-agent");
 
         // custom data to be passed around - qvariant types
         ctx.set("customdata", "value");
@@ -37,13 +37,12 @@ int main(int argc, char *argv[])
     // Final middleware, does long running action concurrently and sends response as json
     app.use([](auto &ctx) {
         auto &res = ctx.response;
-        auto &req = ctx.request;
 
-        // show header and our custom data
-        qDebug() << "last route" << req.header << " " << ctx.get("customdata");
+        // show our custom data
+        qDebug() << "last route: " << ctx.get("customdata");
 
         // set custom header
-        res.header["x-foo-data"] = "tvmid";
+        res.set("x-foo-data", "tvmid");
 
         // these are already default values
         // text/plain will be overriden by send if json is wanted
