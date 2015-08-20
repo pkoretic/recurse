@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         // text/plain will be overriden by send if json is wanted
         res.status(200).type("text/plain");
 
-        // some long running action in new thread pool
+        // some long running action runs in thread pool
         auto future = QtConcurrent::run([]{
            qDebug() << "long running action...";
 
@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
            return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
         });
 
+        // get results and send response to client
         auto watcher = new QFutureWatcher<QJsonDocument>;
         QObject::connect(watcher, &QFutureWatcher<QJsonDocument>::finished,[&res, future]() {
             qDebug() << "long running action done";
