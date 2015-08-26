@@ -16,22 +16,34 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // Start middleware, logger
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next, auto prev) {
+
         qDebug() << "received a new request from:" << ctx.request.ip;
-        next();
+        int first = 123;
+
+        next([&](){
+            qDebug() << "first:" << first;
+
+            prev();
+        });
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next, auto prev) {
         qDebug() << "routed request:" << ctx.request.get("user-agent");
 
+        QString test("a");
         // custom data to be passed around - qvariant types
         ctx.set("customdata", "value");
 
         // for any kind of data use
         // ctx.data["key"] = *void
 
-        next();
+        next([&](){
+            qDebug() << "string:" << test;
+
+            prev();
+        });
     });
 
     // Final middleware, does long running action concurrently and sends response as json
