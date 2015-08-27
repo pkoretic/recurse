@@ -10,6 +10,7 @@
 #include "../recurse.hpp"
 
 #include <QtConcurrent/QtConcurrent>
+#include <QElapsedTimer>
 
 int main(int argc, char *argv[])
 {
@@ -17,15 +18,24 @@ int main(int argc, char *argv[])
 
     // Start middleware, logger
     app.use([](auto &ctx, auto next, auto prev) {
+        QElapsedTimer time;
+        time.start();
 
-        qDebug() << "received a new request from:" << ctx.request.ip;
-        int first = 123;
+        qDebug() << "request started:" << ctx.request.ip;
 
         next([=](){
-            qDebug() << "last upstream mw:" << first;
+            qDebug() << "last upstream mw: time taken:" << time.elapsed();
 
             prev();
         });
+
+    });
+
+    // only next mw
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "request hostname:" << ctx.request.hostname;
+
+        next();
     });
 
     // Second middleware, sets custom data
@@ -67,7 +77,10 @@ int main(int argc, char *argv[])
         auto future = QtConcurrent::run([]{
            qDebug() << "long running action...";
 
+           QThread::sleep(1);
+
            // return our demo result
+
            return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
         });
 
