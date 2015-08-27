@@ -43,7 +43,7 @@ private:
     QVector<next_f> m_middleware;
     QVector<void_f> m_middleware_prev;
 
-    void m_end(Context *ctx);
+    void m_end();
     void m_send(Context *ctx);
     void m_next(void_f prev, Context *ctx, int current_middleware);
     void m_prev(int current_middleware);
@@ -92,7 +92,7 @@ bool Recurse::listen(quint64 port, QHostAddress address)
                 return;
 
             if (m_middleware.count() > 0) {
-                ctx->response.end = std::bind(&Recurse::m_end, this, ctx);
+                ctx->response.end = std::bind(&Recurse::m_end, this);
 
                 m_middleware[0]( *ctx, std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0), std::bind(&Recurse::m_send, this, ctx));
             }
@@ -113,9 +113,6 @@ void Recurse::m_next(void_f prev, Context *ctx, int current_middleware)
     if (++current_middleware >= m_middleware.size()) {
         return;
     };
-
-    // test
-    prev();
 
     // save prev function
     m_middleware_prev.push_back(prev);
@@ -182,32 +179,17 @@ void Recurse::use(final_f f)
 //! \param request
 //! \param response
 //!
-void Recurse::m_end(Context *ctx)
+void Recurse::m_end()
 {
-    Request &request = ctx->request;
-    Response &response = ctx->response;
+    qDebug() << "start upstream";
 
-    qDebug() << "calling end with:" << response.body();
-
-    response.method = request.method;
-    response.protocol = request.protocol;
-
-    QString reply = response.create_reply();
-
-    // send response to the client
-    qint64 check = request.socket->write(reply.toUtf8());
-
-    qDebug() << "socket write debug:" << check;
-    request.socket->close();
-
-    delete ctx;
-
+    m_middleware_prev[m_middleware_prev.size()-1]();
 };
 
 
 void Recurse::m_send(Context *ctx)
 {
-    return;
+    qDebug() << "end upstream";
 
     Request &request = ctx->request;
     Response &response = ctx->response;

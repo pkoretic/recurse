@@ -21,8 +21,8 @@ int main(int argc, char *argv[])
         qDebug() << "received a new request from:" << ctx.request.ip;
         int first = 123;
 
-        next([&](){
-            qDebug() << "first:" << first;
+        next([=](){
+            qDebug() << "last upstream mw:" << first;
 
             prev();
         });
@@ -39,8 +39,11 @@ int main(int argc, char *argv[])
         // for any kind of data use
         // ctx.data["key"] = *void
 
-        next([&](){
-            qDebug() << "string:" << test;
+        next([&ctx, test, prev](){
+            qDebug() << "first upstream mw:" << test;
+
+            // overrides response
+            //ctx.response.body("10");
 
             prev();
         });
