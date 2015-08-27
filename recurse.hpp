@@ -23,7 +23,8 @@ class Recurse : public QObject
 {
     typedef std::function<void()> void_f;
     typedef std::function<void(void_f prev)> void_ff;
-    typedef std::function<void(Context &ctx, void_ff next, void_f prev)> next_f;
+    typedef std::function<void(Context &ctx, void_ff next, void_f prev)> next_prev_f;
+    typedef std::function<void(Context &ctx, void_f next)> next_f;
     typedef std::function<void(Context &ctx)> final_f;
 
 public:
@@ -32,7 +33,11 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     void use(next_f next);
+    void use(next_prev_f next);
+
     void use(QVector<next_f> nexts);
+    void use(QVector<next_prev_f> nexts);
+
     void use(final_f next);
 
 private:
@@ -40,13 +45,12 @@ private:
     QTcpServer m_tcp_server;
 
     quint64 m_port;
-    QVector<next_f> m_middleware;
+    QVector<next_prev_f> m_middleware_next;
     QVector<void_f> m_middleware_prev;
 
     void m_end();
     void m_send(Context *ctx);
     void m_next(void_f prev, Context *ctx, int current_middleware);
-    void m_prev(int current_middleware);
 };
 
 Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -91,10 +95,10 @@ bool Recurse::listen(quint64 port, QHostAddress address)
             if (ctx->request.length < ctx->request.get("content-length").toLongLong())
                 return;
 
-            if (m_middleware.count() > 0) {
+            if (m_middleware_next.count() > 0) {
                 ctx->response.end = std::bind(&Recurse::m_end, this);
 
-                m_middleware[0]( *ctx, std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0), std::bind(&Recurse::m_send, this, ctx));
+                m_middleware_next[0]( *ctx, std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0), std::bind(&Recurse::m_send, this, ctx));
             }
         });
     });
@@ -108,28 +112,18 @@ bool Recurse::listen(quint64 port, QHostAddress address)
 //!
 void Recurse::m_next(void_f prev, Context *ctx, int current_middleware)
 {
-    qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
+    qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
 
-    if (++current_middleware >= m_middleware.size()) {
+    if (++current_middleware >= m_middleware_next.size()) {
         return;
     };
 
     // save prev function
-    m_middleware_prev.push_back(prev);
+    if (prev)
+        m_middleware_prev.push_back(prev);
 
     // call next function with current prev
-    m_middleware[current_middleware]( *ctx, std::bind(&Recurse::m_next, this,  std::placeholders::_1, ctx, current_middleware), prev );
-};
-
-void Recurse::m_prev(int current_middleware)
-{
-    qDebug() << "calling next:" << current_middleware << " num:" << m_middleware.size();
-
-    if (--current_middleware >= 0) {
-        return;
-    };
-
-    //m_middleware_prev[current_middleware](std::bind(&Recurse::m_prev, this, current_middleware));
+    m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_next, this,  std::placeholders::_1, ctx, current_middleware), prev );
 };
 
 //!
@@ -140,9 +134,26 @@ void Recurse::m_prev(int current_middleware)
 //!
 //!
 //!
+void Recurse::use(next_prev_f f)
+{
+    m_middleware_next.push_back(f);
+};
+
+//!
+//! \brief Recurse::use
+//! overload function, next middleware only, no upstream
+//!
+//! \param f
+//!
 void Recurse::use(next_f f)
 {
-    m_middleware.push_back(f);
+    m_middleware_next.push_back([f](Context &ctx,  void_ff next, void_f prev) {
+        f(ctx, [next, prev]() {
+            next([prev](){
+                prev();
+            });
+        });
+    });
 };
 
 //!
@@ -153,10 +164,28 @@ void Recurse::use(next_f f)
 //!
 //! \param f vector of middlewares
 //!
+void Recurse::use(QVector<next_prev_f> f)
+{
+    for(const auto &g : f)
+        m_middleware_next.push_back(g);
+};
+
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! add multiple middlewares, no upstream
+//! \param f
+//!
 void Recurse::use(QVector<next_f> f)
 {
     for(const auto &g : f)
-        m_middleware.push_back(g);
+        m_middleware_next.push_back([g](Context &ctx,  void_ff next, void_f prev) {
+            g(ctx, [next, prev]() {
+                next([prev](){
+                    prev();
+                });
+            });
+        });
 };
 
 //!
@@ -168,7 +197,7 @@ void Recurse::use(QVector<next_f> f)
 //!
 void Recurse::use(final_f f)
 {
-    m_middleware.push_back([f](Context &ctx,  void_ff /* next */, void_f /* prev */) {
+    m_middleware_next.push_back([f](Context &ctx,  void_ff /* next */, void_f /* prev */) {
         f(ctx);
     });
 };
@@ -186,7 +215,12 @@ void Recurse::m_end()
     m_middleware_prev[m_middleware_prev.size()-1]();
 };
 
-
+//!
+//! \brief Recurse::m_send
+//! used as last middleware (upstream) to be called
+//! sends response to client
+//! \param ctx
+//!
 void Recurse::m_send(Context *ctx)
 {
     qDebug() << "end upstream";
