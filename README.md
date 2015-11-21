@@ -63,8 +63,15 @@ macx {
 build, run and use
 ```
 # build
+
 qmake main.pro
+# or for faster build: qmake QMAKE_CC=clang QMAKE_CXX=clang++ main.pro
+# or for even faster build: qmake QMAKE_CC="ccache clang" QMAKE_CXX="ccache clang++" main.prop
+
 make
+# or make -j[number of cores + 1]
+# or make release (default)
+# or make debug
 
 # run
 ./example
