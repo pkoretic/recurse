@@ -96,6 +96,10 @@ int main(int argc, char *argv[])
 
     });
 
-    qDebug() << "starting on port 3000...";
-    app.listen(3000);
+    quint16 port = 3000;
+    qDebug("starting on port %d ...", port);
+    if(!app.listen(port))
+    {
+        qDebug("unable to listen on port: %d ", port);
+    }
 }
