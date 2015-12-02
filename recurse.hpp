@@ -7,6 +7,10 @@
 #include <QVector>
 #include <functional>
 
+#include "request.hpp"
+#include "response.hpp"
+#include "context.hpp"
+
 //!
 //! \brief The HttpServer class
 //! Http (unsecure) server class
@@ -25,11 +29,12 @@ private:
     QTcpServer m_tcp_server;
     quint64 m_port;
     QHostAddress m_address;
+    QObject *m_parent;
 };
 
 inline HttpServer::HttpServer(QObject *parent)
 {
-    Q_UNUSED(parent);
+    m_parent = parent;
 };
 
 inline HttpServer::~HttpServer()
@@ -48,7 +53,9 @@ inline bool HttpServer::compose(quint64 port, QHostAddress address)
     }
 
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
-        qDebug() << "connection!";
+        qDebug() << "client connected";
+
+        // TODO: create ctx (need parent's ref here?)
     });
 
     return true;
@@ -62,16 +69,23 @@ class Recurse : public QObject
 {
     Q_OBJECT
 
+    using void_f = std::function<void()>;
+    using void_ff = std::function<void(void_f prev)>;
+    using next_prev_f = std::function<void(Context &ctx, void_ff next, void_f prev)>;
+    using next_f = std::function<void(Context &ctx, void_f next)>;
+    using final_f =  std::function<void(Context &ctx)>;
+
 public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     bool listen(HttpServer *server);
+    void tester();
 
 private:
     QCoreApplication app;
-    HttpServer *srv;
+    HttpServer *http;
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -81,7 +95,7 @@ inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, a
 
 inline Recurse::~Recurse()
 {
-
+    delete http;
 };
 
 //!
@@ -95,7 +109,8 @@ inline Recurse::~Recurse()
 //!
 inline bool Recurse::listen(quint64 port, QHostAddress address)
 {
-    srv->compose(port, address);
+    http = new HttpServer(this);
+    http->compose(port, address);
 
     return app.exec();
 };
@@ -104,7 +119,7 @@ inline bool Recurse::listen(quint64 port, QHostAddress address)
 //! \brief Recurse::listen
 //! listen for tcp requests
 //!
-//! Overloaded function
+//! overloaded function
 //!
 //! \param server pointer to the HttpServer instance
 //!
@@ -112,8 +127,13 @@ inline bool Recurse::listen(quint64 port, QHostAddress address)
 //!
 inline bool Recurse::listen(HttpServer *server)
 {
-    srv = server;
+    http = server;
 
     return app.exec();
 };
 
+
+inline void Recurse::tester()
+{
+    qDebug() << "test function";
+};
