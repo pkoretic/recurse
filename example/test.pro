@@ -10,7 +10,10 @@ CONFIG   -= app_bundle
 TEMPLATE = app
 
 SOURCES += main.cpp
-HEADERS += ../recurse.hpp
+HEADERS += ../recurse.hpp \
+           ../request.hpp \
+           ../response.hpp \
+           ../context.hpp
 
 QMAKE_CXXFLAGS += -std=c++14
 
