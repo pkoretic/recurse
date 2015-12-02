@@ -113,6 +113,7 @@ inline bool Recurse::listen(quint64 port, QHostAddress address)
 inline bool Recurse::listen(HttpServer *server)
 {
     srv = server;
-    return true;
+
+    return app.exec();
 };
 
