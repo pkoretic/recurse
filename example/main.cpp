@@ -1,4 +1,5 @@
 #include <../recurse.hpp>
+#include <QHash>
 
 int main(int argc, char *argv[])
 {
@@ -26,6 +27,14 @@ int main(int argc, char *argv[])
     // manual https server setup
     HttpsServer https;
 
-    https.compose(3000);
+    QHash<QString, QVariant> options;
+    options["port"] = 3000;
+    options["private_key"] = "./priv.pem";
+    options["certificate"] = "./cert.pem";
+
+    if (!https.compose(options)) {
+        exit(1);
+    }
+
     app.listen(&https);
 };
