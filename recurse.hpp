@@ -402,7 +402,7 @@ inline bool Recurse::listen(HttpsServer *server)
     https = server;
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
-    // connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
+    connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
     return startEventLoop();
 };
 
