@@ -6,8 +6,10 @@ int main(int argc, char *argv[])
 
     qDebug() << "start listening...";
 
-    app.listen(3000);
+    // default server setup
+    // app.listen(3000);
 
+    // manual http server setup
     /*
     HttpServer http;
 
@@ -20,4 +22,10 @@ int main(int argc, char *argv[])
 
     app.listen(&http);
     */
+
+    // manual https server setup
+    HttpsServer https;
+
+    https.compose(3000);
+    app.listen(&https);
 };
