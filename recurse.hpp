@@ -92,12 +92,26 @@ public:
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     bool listen(HttpServer *server);
 
+    void use(next_f next);
+    void use(next_prev_f next);
+
+    void use(QVector<next_f> nexts);
+    void use(QVector<next_prev_f> nexts);
+
+    void use(final_f next);
+
 public slots:
     bool handleConnection(QTcpSocket *socket);
 
 private:
     QCoreApplication app;
     HttpServer *http;
+
+    QVector<next_prev_f> m_middleware_next;
+
+    void m_end(QVector<void_f> *middleware_prev);
+    void m_send(Context *ctx);
+    void m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -120,10 +134,32 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 {
     qDebug() << "handling new connection";
 
-    connect(socket, &QTcpSocket::readyRead, [this, socket] {
-        QString data(socket->readAll());
+    auto middleware_prev = new QVector<void_f>;
+    auto ctx = new Context;
+    ctx->request.socket = socket;
 
-        qDebug() << "got data:" << data;
+    connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev] {
+        QString data(ctx->request.socket->readAll());
+
+        ctx->request.parse(data);
+
+        if (ctx->request.length < ctx->request.get("content-length").toLongLong()) {
+            return;
+        }
+
+        qDebug() << ctx->request.body;
+
+        /*
+        if (m_middleware_next.count() > 0) {
+            ctx->response.end = std::bind(&Recurse::m_end, this, middleware_prev);
+
+            m_middleware_next[0](
+                *ctx,
+                std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
+                std::bind(&Recurse::m_send, this, ctx));
+        }
+        */
+
     });
 
     return true;
