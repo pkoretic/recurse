@@ -32,7 +32,7 @@ private:
     QObject *m_parent;
 
 signals:
-    void createContext();
+    void socketReady(QTcpSocket *socket);
 };
 
 inline HttpServer::HttpServer(QObject *parent)
@@ -57,9 +57,15 @@ inline bool HttpServer::compose(quint64 port, QHostAddress address)
 
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
+        QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
-        emit createContext();
-        // TODO: create ctx (need parent's ref here?)
+        if (socket == 0) {
+            qDebug() << "no connection?";
+            delete socket;
+            return;
+        }
+
+        emit socketReady(socket);
     });
 
     return true;
@@ -87,7 +93,7 @@ public:
     bool listen(HttpServer *server);
 
 public slots:
-    bool createContext();
+    bool handleConnection(QTcpSocket *socket);
 
 private:
     QCoreApplication app;
@@ -105,14 +111,21 @@ inline Recurse::~Recurse()
 };
 
 //!
-//! \brief Recurse::createContext
+//! \brief Recurse::handleConnection
 //! creates new recurse context for a tcp session
 //!
 //! \return true on success
 //!
-inline bool Recurse::createContext()
+inline bool Recurse::handleConnection(QTcpSocket *socket)
 {
-    qDebug() << "creating new context";
+    qDebug() << "handling new connection";
+
+    connect(socket, &QTcpSocket::readyRead, [this, socket] {
+        QString data(socket->readAll());
+
+        qDebug() << "got data:" << data;
+    });
+
     return true;
 };
 
@@ -131,8 +144,8 @@ inline bool Recurse::listen(quint64 port, QHostAddress address)
     http = new HttpServer(this);
     http->compose(port, address);
 
-    // connect HttpServer signal 'createContext' to this class' 'createContext' slot
-    connect(http, &HttpServer::createContext, this, &Recurse::createContext);
+    // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
+    connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
     return app.exec();
 };
 
@@ -150,8 +163,8 @@ inline bool Recurse::listen(HttpServer *server)
 {
     http = server;
 
-    // connect HttpServer signal 'createContext' to this class' 'createContext' slot
-    connect(http, &HttpServer::createContext, this, &Recurse::createContext);
+    // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
+    connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
     return app.exec();
 };
 
