@@ -12,6 +12,31 @@
 #include "context.hpp"
 
 //!
+//! \brief The RSslServer class
+//! Recurse ssl server implementation used for Recurse::HttpsServer
+//!
+class RSslServer : public QTcpServer
+{
+    Q_OBJECT
+    Q_DISABLE_COPY(RSslServer)
+
+public:
+    RSslServer(QObject *parent = NULL);
+    ~RSslServer();
+
+};
+
+inline RSslServer::RSslServer(QObject *parent)
+{
+    Q_UNUSED(parent);
+};
+
+inline RSslServer::~RSslServer()
+{
+
+};
+
+//!
 //! \brief The HttpServer class
 //! Http (unsecure) server class
 //!
@@ -86,7 +111,7 @@ public:
     bool compose(quint64 port, QHostAddress address = QHostAddress::Any);
 
 private:
-    QTcpServer m_tcp_server;
+    RSslServer m_tcp_server;
     quint64 m_port;
     QHostAddress m_address;
     QObject *m_parent;
@@ -167,8 +192,15 @@ inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, a
 inline Recurse::~Recurse()
 {
     delete http;
+    delete https;
 };
 
+//!
+//! \brief Recurse::startEventLoop
+//! starts a Qt build-in event loop
+//!
+//! \return true on success
+//!
 inline bool Recurse::startEventLoop()
 {
     return app.exec();
@@ -260,7 +292,7 @@ inline bool Recurse::listen(HttpServer *server)
 //!
 //! overloaded function
 //!
-//! \param server pointer to the HttpServer instance
+//! \param server pointer to the HttpsServer instance
 //!
 //! \return true on success
 //!
