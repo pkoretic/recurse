@@ -30,6 +30,9 @@ private:
     quint64 m_port;
     QHostAddress m_address;
     QObject *m_parent;
+
+signals:
+    void createContext();
 };
 
 inline HttpServer::HttpServer(QObject *parent)
@@ -55,6 +58,7 @@ inline bool HttpServer::compose(quint64 port, QHostAddress address)
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
 
+        emit createContext();
         // TODO: create ctx (need parent's ref here?)
     });
 
@@ -81,7 +85,9 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     bool listen(HttpServer *server);
-    void tester();
+
+public slots:
+    bool createContext();
 
 private:
     QCoreApplication app;
@@ -99,6 +105,18 @@ inline Recurse::~Recurse()
 };
 
 //!
+//! \brief Recurse::createContext
+//! creates new recurse context for a tcp session
+//!
+//! \return true on success
+//!
+inline bool Recurse::createContext()
+{
+    qDebug() << "creating new context";
+    return true;
+};
+
+//!
 //! \brief Recurse::listen
 //! listen for tcp requests
 //!
@@ -109,9 +127,12 @@ inline Recurse::~Recurse()
 //!
 inline bool Recurse::listen(quint64 port, QHostAddress address)
 {
+    // set HttpServer instance, send reference to this object and prepare http connection
     http = new HttpServer(this);
     http->compose(port, address);
 
+    // connect HttpServer signal 'createContext' to this class' 'createContext' slot
+    connect(http, &HttpServer::createContext, this, &Recurse::createContext);
     return app.exec();
 };
 
@@ -129,11 +150,8 @@ inline bool Recurse::listen(HttpServer *server)
 {
     http = server;
 
+    // connect HttpServer signal 'createContext' to this class' 'createContext' slot
+    connect(http, &HttpServer::createContext, this, &Recurse::createContext);
     return app.exec();
 };
 
-
-inline void Recurse::tester()
-{
-    qDebug() << "test function";
-};
