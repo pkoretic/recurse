@@ -150,7 +150,6 @@ public:
 
     bool compose(quint16 port, QHostAddress address = QHostAddress::Any);
     bool compose(const QHash<QString, QVariant> &options);
-    // TODO: create port, address, options overload
 
 private:
     SslTcpServer m_tcp_server;
@@ -172,7 +171,6 @@ inline HttpsServer::~HttpsServer()
 
 };
 
-// TODO: do we need this method? (port, address)
 inline bool HttpsServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
@@ -186,7 +184,6 @@ inline bool HttpsServer::compose(quint16 port, QHostAddress address)
     connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
         qDebug() << "secured connection ready";
 
-        // FIXME: check this out
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
         if (socket == 0) {
