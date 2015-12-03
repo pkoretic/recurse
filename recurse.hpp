@@ -1,9 +1,14 @@
 #include <QCoreApplication>
+#include <QFile>
+#include <QHostAddress>
 #include <QObject>
+#include <QSslCertificate>
+#include <QSslConfiguration>
+#include <QSslKey>
+#include <QSslSocket>
+#include <QStringBuilder>
 #include <QTcpServer>
 #include <QTcpSocket>
-#include <QHostAddress>
-#include <QStringBuilder>
 #include <QVector>
 #include <functional>
 
@@ -12,28 +17,63 @@
 #include "context.hpp"
 
 //!
-//! \brief The RSslServer class
+//! \brief The SslTcpServer class
 //! Recurse ssl server implementation used for Recurse::HttpsServer
 //!
-class RSslServer : public QTcpServer
+class SslTcpServer : public QTcpServer
 {
     Q_OBJECT
-    Q_DISABLE_COPY(RSslServer)
+    Q_DISABLE_COPY(SslTcpServer)
 
 public:
-    RSslServer(QObject *parent = NULL);
-    ~RSslServer();
+    SslTcpServer(QObject *parent = NULL);
+    ~SslTcpServer();
 
+    QSslSocket *nextPendingConnection();
+    void setSslConfiguration(const QSslConfiguration &sslConfiguration);
+
+Q_SIGNALS:
+    void connectionEncrypted();
+
+protected:
+    //!
+    //! brief overridden incomingConnection from QTcpServer
+    //!
+    virtual void incomingConnection(qintptr socket_descriptor)
+    {
+        QSslSocket *socket = new QSslSocket();
+
+        socket->setSslConfiguration(m_ssl_configuration);
+        socket->setSocketDescriptor(socket_descriptor);
+
+        connect(socket, &QSslSocket::encrypted, this, &SslTcpServer::connectionEncrypted);
+
+        addPendingConnection(socket);
+        socket->startServerEncryption();
+    };
+
+private:
+    QSslConfiguration m_ssl_configuration;
 };
 
-inline RSslServer::RSslServer(QObject *parent)
+inline SslTcpServer::SslTcpServer(QObject *parent)
 {
     Q_UNUSED(parent);
 };
 
-inline RSslServer::~RSslServer()
+inline SslTcpServer::~SslTcpServer()
 {
 
+};
+
+inline void SslTcpServer::setSslConfiguration(const QSslConfiguration &sslConfiguration)
+{
+    m_ssl_configuration = sslConfiguration;
+};
+
+inline QSslSocket *SslTcpServer::nextPendingConnection()
+{
+    return static_cast<QSslSocket *>(QTcpServer::nextPendingConnection());
 };
 
 //!
@@ -48,11 +88,11 @@ public:
     HttpServer(QObject *parent = NULL);
     ~HttpServer();
 
-    bool compose(quint64 port, QHostAddress address = QHostAddress::Any);
+    bool compose(quint16 port, QHostAddress address = QHostAddress::Any);
 
 private:
     QTcpServer m_tcp_server;
-    quint64 m_port;
+    quint16 m_port;
     QHostAddress m_address;
     QObject *m_parent;
 
@@ -70,7 +110,7 @@ inline HttpServer::~HttpServer()
 
 };
 
-inline bool HttpServer::compose(quint64 port, QHostAddress address)
+inline bool HttpServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
@@ -108,11 +148,13 @@ public:
     HttpsServer(QObject *parent = NULL);
     ~HttpsServer();
 
-    bool compose(quint64 port, QHostAddress address = QHostAddress::Any);
+    bool compose(quint16 port, QHostAddress address = QHostAddress::Any);
+    bool compose(const QHash<QString, QVariant> &options);
+    // TODO: create port, address, options overload
 
 private:
-    RSslServer m_tcp_server;
-    quint64 m_port;
+    SslTcpServer m_tcp_server;
+    quint16 m_port;
     QHostAddress m_address;
     QObject *m_parent;
 
@@ -130,12 +172,71 @@ inline HttpsServer::~HttpsServer()
 
 };
 
-inline bool HttpsServer::compose(quint64 port, QHostAddress address)
+// TODO: do we need this method? (port, address)
+inline bool HttpsServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
 
+    if (!m_tcp_server.listen(address, port)) {
+        qDebug() << "failed to start listening";
+        return false;
+    }
+
+    connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
+        qDebug() << "secured connection ready";
+
+        // FIXME: check this out
+        QTcpSocket *socket = m_tcp_server.nextPendingConnection();
+
+        if (socket == 0) {
+            qDebug() << "no connection?";
+            delete socket;
+            return;
+        }
+
+        emit socketReady(socket);
+    });
+
     return true;
+};
+
+inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
+{
+    QByteArray priv_key;
+    QFile priv_key_file(options["private_key"].toString());
+
+    if (priv_key_file.open(QIODevice::ReadOnly)) {
+        priv_key = priv_key_file.readAll();
+        priv_key_file.close();
+    }
+
+    QSslKey ssl_key(priv_key, QSsl::Rsa);
+
+    QByteArray cert_key;
+    QFile cert_key_file(options["certificate"].toString());
+
+    if (cert_key_file.open(QIODevice::ReadOnly)) {
+        cert_key = cert_key_file.readAll();
+        cert_key_file.close();
+    }
+
+    QSslCertificate ssl_cert(cert_key);
+
+    QSslConfiguration ssl_configuration;
+    ssl_configuration.setPrivateKey(ssl_key);
+    ssl_configuration.setLocalCertificate(ssl_cert);
+
+    m_tcp_server.setSslConfiguration(ssl_configuration);
+
+    // TODO: run server and set slots
+
+    if (!options.contains("port")) {
+        // FIXME: return something else?
+        return false;
+    }
+
+    return compose(options["port"].toUInt(), QHostAddress::LocalHost);
 };
 
 //!
@@ -156,7 +257,7 @@ public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
-    bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
+    bool listen(quint16 port, QHostAddress address = QHostAddress::Any);
     bool listen(HttpServer *server);
     bool listen(HttpsServer *server);
 
@@ -256,7 +357,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 //!
 //! \return true on success
 //!
-inline bool Recurse::listen(quint64 port, QHostAddress address)
+inline bool Recurse::listen(quint16 port, QHostAddress address)
 {
     // set HttpServer instance, send reference to this object and prepare http connection
     http = new HttpServer(this);
