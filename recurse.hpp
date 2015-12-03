@@ -72,6 +72,48 @@ inline bool HttpServer::compose(quint64 port, QHostAddress address)
 };
 
 //!
+//! \brief The HttpsServer class
+//! Https (secure) server class
+//!
+class HttpsServer : public QObject
+{
+    Q_OBJECT
+
+public:
+    HttpsServer(QObject *parent = NULL);
+    ~HttpsServer();
+
+    bool compose(quint64 port, QHostAddress address = QHostAddress::Any);
+
+private:
+    QTcpServer m_tcp_server;
+    quint64 m_port;
+    QHostAddress m_address;
+    QObject *m_parent;
+
+signals:
+    void socketReady(QTcpSocket *socket);
+};
+
+inline HttpsServer::HttpsServer(QObject *parent)
+{
+    m_parent = parent;
+};
+
+inline HttpsServer::~HttpsServer()
+{
+
+};
+
+inline bool HttpsServer::compose(quint64 port, QHostAddress address)
+{
+    m_port = port;
+    m_address = address;
+
+    return true;
+};
+
+//!
 //! \brief The Recurse class
 //! main class of the app
 //!
@@ -91,6 +133,7 @@ public:
 
     bool listen(quint64 port, QHostAddress address = QHostAddress::Any);
     bool listen(HttpServer *server);
+    bool listen(HttpsServer *server);
 
     void use(next_f next);
     void use(next_prev_f next);
@@ -106,12 +149,14 @@ public slots:
 private:
     QCoreApplication app;
     HttpServer *http;
+    HttpsServer *https;
 
     QVector<next_prev_f> m_middleware_next;
 
     void m_end(QVector<void_f> *middleware_prev);
     void m_send(Context *ctx);
     void m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
+    bool startEventLoop();
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -122,6 +167,11 @@ inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, a
 inline Recurse::~Recurse()
 {
     delete http;
+};
+
+inline bool Recurse::startEventLoop()
+{
+    return app.exec();
 };
 
 //!
@@ -182,7 +232,7 @@ inline bool Recurse::listen(quint64 port, QHostAddress address)
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
-    return app.exec();
+    return startEventLoop();
 };
 
 //!
@@ -201,6 +251,25 @@ inline bool Recurse::listen(HttpServer *server)
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
-    return app.exec();
+    return startEventLoop();
+};
+
+//!
+//! \brief Recurse::listen
+//! listen for tcp requests
+//!
+//! overloaded function
+//!
+//! \param server pointer to the HttpServer instance
+//!
+//! \return true on success
+//!
+inline bool Recurse::listen(HttpsServer *server)
+{
+    https = server;
+
+    // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
+    // connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
+    return startEventLoop();
 };
 
