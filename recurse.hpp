@@ -25,6 +25,8 @@ class SslTcpServer : public QTcpServer
     Q_OBJECT
     Q_DISABLE_COPY(SslTcpServer)
 
+    typedef void (QSslSocket::* RSslErrors)(const QList<QSslError> &);
+
 public:
     SslTcpServer(QObject *parent = NULL);
     ~SslTcpServer();
@@ -34,6 +36,8 @@ public:
 
 Q_SIGNALS:
     void connectionEncrypted();
+    void sslErrors(const QList<QSslError> &errors);
+    void peerVerifyError(const QSslError &error);
 
 protected:
     //!
@@ -47,6 +51,8 @@ protected:
         socket->setSocketDescriptor(socket_descriptor);
 
         connect(socket, &QSslSocket::encrypted, this, &SslTcpServer::connectionEncrypted);
+        connect(socket, static_cast<RSslErrors>(&QSslSocket::sslErrors), this, &SslTcpServer::sslErrors);
+        connect(socket, &QSslSocket::peerVerifyError, this, &SslTcpServer::peerVerifyError);
 
         addPendingConnection(socket);
         socket->startServerEncryption();
