@@ -41,7 +41,7 @@ Q_SIGNALS:
 
 protected:
     //!
-    //! brief overridden incomingConnection from QTcpServer
+    //! \brief overridden incomingConnection from QTcpServer
     //!
     virtual void incomingConnection(qintptr socket_descriptor)
     {
@@ -72,6 +72,12 @@ inline SslTcpServer::~SslTcpServer()
 
 };
 
+//!
+//! \brief SslTcpServer::setSslConfiguration
+//! set ssl socket configuration
+//!
+//! \param sslConfiguration ssl socket configuration
+//!
 inline void SslTcpServer::setSslConfiguration(const QSslConfiguration &sslConfiguration)
 {
     m_ssl_configuration = sslConfiguration;
@@ -117,6 +123,15 @@ inline HttpServer::~HttpServer()
 
 };
 
+//!
+//! \brief HttpServer::compose
+//! prepare http server for request forwarding
+//!
+//! \param port tcp server port
+//! \param address tcp server listening address
+//!
+//! \return true on success
+//!
 inline bool HttpServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
@@ -178,6 +193,15 @@ inline HttpsServer::~HttpsServer()
 
 };
 
+//!
+//! \brief HttpsServer::compose
+//! prepare https server for request forwarding
+//!
+//! \param port tcp server port
+//! \param address tcp server listening address
+//!
+//! \return true on success
+//!
 inline bool HttpsServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
@@ -205,6 +229,15 @@ inline bool HttpsServer::compose(quint16 port, QHostAddress address)
     return true;
 };
 
+//!
+//! \brief HttpsServer::compose
+//! overloaded function,
+//! prepare https server for request forwarding
+//!
+//! \param options QHash options of <QString, QVariant>
+//!
+//! \return true on success
+//!
 inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
 {
     QByteArray priv_key;
@@ -316,6 +349,8 @@ inline Recurse::~Recurse()
 //! \brief Recurse::handleConnection
 //! creates new recurse context for a tcp session
 //!
+//! \param pointer to the socket sent from http/https server
+//!
 //! \return true on success
 //!
 inline bool Recurse::handleConnection(QTcpSocket *socket)
@@ -354,6 +389,15 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     return true;
 };
 
+//!
+//! \brief Recurse::http_server
+//! http server initialization
+//!
+//! \param port tcp server port
+//! \param address tcp server listening address
+//!
+//! \return true on success
+//!
 inline bool Recurse::http_server(quint16 port, QHostAddress address)
 {
     http = new HttpServer(this);
@@ -362,6 +406,15 @@ inline bool Recurse::http_server(quint16 port, QHostAddress address)
     return http->compose(port, address);
 };
 
+//!
+//! \brief Recurse::http_server
+//! overloaded function,
+//! http server initialization
+//!
+//! \param options QHash options of <QString, QVariant>
+//!
+//! \return true on success
+//!
 inline bool Recurse::http_server(const QHash<QString, QVariant> &options)
 {
     if (!options.contains("port")) {
@@ -378,8 +431,21 @@ inline bool Recurse::http_server(const QHash<QString, QVariant> &options)
     return http_server(options.value("port").toUInt());
 };
 
+//!
+//! \brief Recurse::https_server
+//! https (secure) server initialization
+//!
+//! \param options QHash options of <QString, QVariant>
+//!
+//! \return true on success
+//!
 inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
 {
+    if (!options.contains("port")) {
+        // FIXME: return an appropriate error
+        return false;
+    }
+
     https = new HttpsServer(this);
     m_https_set = true;
 
@@ -397,6 +463,7 @@ inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
 //!
 inline bool Recurse::listen(quint16 port, QHostAddress address)
 {
+    // if this function is called and m_http_set is false
     // set HttpServer instance, send reference to this object and prepare http connection
     http = new HttpServer(this);
     http->compose(port, address);
@@ -407,6 +474,13 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
     return app.exec();
 };
 
+//!
+//! \brief Recurse::listen
+//! overloaded function,
+//! listen for tcp requests
+//!
+//! \return true on success
+//!
 inline bool Recurse::listen()
 {
     if (m_http_set) {
