@@ -474,7 +474,7 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
 {
     // if this function is called and m_http_set is true, ignore port
     if (m_http_set) {
-        port = m_http_port
+        return listen();
     }
 
     // if this function is called and m_http_set is false
