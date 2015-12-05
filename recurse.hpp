@@ -100,7 +100,7 @@ public:
     HttpServer(QObject *parent = NULL);
     ~HttpServer();
 
-    bool compose(quint16 port, QHostAddress address = QHostAddress::Any);
+    void compose(quint16 port, QHostAddress address = QHostAddress::Any);
 
 private:
     QTcpServer m_tcp_server;
@@ -130,16 +130,14 @@ inline HttpServer::~HttpServer()
 //! \param port tcp server port
 //! \param address tcp server listening address
 //!
-//! \return true on success
-//!
-inline bool HttpServer::compose(quint16 port, QHostAddress address)
+inline void HttpServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
-        qDebug() << "failed to start listening";
-        return false;
+        qDebug() << "failed to start listening on port";
+        throw "failed to start listening on port";
     }
 
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
@@ -149,13 +147,12 @@ inline bool HttpServer::compose(quint16 port, QHostAddress address)
         if (socket == 0) {
             qDebug() << "no connection?";
             delete socket;
-            return;
+            // FIXME: send signal instead of throwing
+            throw "no pending connections available";
         }
 
         emit socketReady(socket);
     });
-
-    return true;
 };
 
 //!
@@ -170,8 +167,8 @@ public:
     HttpsServer(QObject *parent = NULL);
     ~HttpsServer();
 
-    bool compose(quint16 port, QHostAddress address = QHostAddress::Any);
-    bool compose(const QHash<QString, QVariant> &options);
+    void compose(quint16 port, QHostAddress address = QHostAddress::Any);
+    void compose(const QHash<QString, QVariant> &options);
 
 private:
     SslTcpServer m_tcp_server;
@@ -202,14 +199,14 @@ inline HttpsServer::~HttpsServer()
 //!
 //! \return true on success
 //!
-inline bool HttpsServer::compose(quint16 port, QHostAddress address)
+inline void HttpsServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
-        qDebug() << "failed to start listening";
-        return false;
+        qDebug() << "failed to start listening on port";
+        throw "failed to start listening on port";
     }
 
     connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
@@ -218,15 +215,14 @@ inline bool HttpsServer::compose(quint16 port, QHostAddress address)
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
         if (socket == 0) {
-            qDebug() << "no connection?";
+            qDebug() << "no pending connections available";
             delete socket;
-            return;
+            // FIXME: send signal instead of throwing
+            throw "no pending connections available";
         }
 
         emit socketReady(socket);
     });
-
-    return true;
 };
 
 //!
@@ -238,7 +234,7 @@ inline bool HttpsServer::compose(quint16 port, QHostAddress address)
 //!
 //! \return true on success
 //!
-inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
+inline void HttpsServer::compose(const QHash<QString, QVariant> &options)
 {
     QByteArray priv_key;
     QFile priv_key_file(options.value("private_key").toString());
@@ -266,14 +262,11 @@ inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
 
     m_tcp_server.setSslConfiguration(ssl_configuration);
 
-    // TODO: run server and set slots
-
     if (!options.contains("port")) {
-        // FIXME: return something else?
-        return false;
+        m_port = 0;
+    } else {
+        m_port = options.value("port").toUInt();
     }
-
-    m_port = options.value("port").toUInt();
 
     if (!options.contains("host")) {
         m_address = QHostAddress::LocalHost;
@@ -281,7 +274,11 @@ inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
         m_address = QHostAddress(options.value("host").toString());
     }
 
-    return compose(m_port, m_address);
+    try {
+        compose(m_port, m_address);
+    } catch (...) {
+        throw;
+    }
 };
 
 //!
@@ -302,9 +299,9 @@ public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
-    bool http_server(quint16 port, QHostAddress address = QHostAddress::Any);
-    bool http_server(const QHash<QString, QVariant> &options);
-    bool https_server(const QHash<QString, QVariant> &options);
+    void http_server(quint16 port, QHostAddress address = QHostAddress::Any);
+    void http_server(const QHash<QString, QVariant> &options);
+    void https_server(const QHash<QString, QVariant> &options);
 
     bool listen(quint16 port, QHostAddress address = QHostAddress::Any);
     bool listen();
@@ -400,17 +397,13 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 //! \param port tcp server port
 //! \param address tcp server listening address
 //!
-//! \return true on success
-//!
-inline bool Recurse::http_server(quint16 port, QHostAddress address)
+inline void Recurse::http_server(quint16 port, QHostAddress address)
 {
     http = new HttpServer(this);
 
     m_http_port = port;
     m_http_address = address;
     m_http_set = true;
-
-    return true;
 };
 
 //!
@@ -420,22 +413,23 @@ inline bool Recurse::http_server(quint16 port, QHostAddress address)
 //!
 //! \param options QHash options of <QString, QVariant>
 //!
-//! \return true on success
-//!
-inline bool Recurse::http_server(const QHash<QString, QVariant> &options)
+inline void Recurse::http_server(const QHash<QString, QVariant> &options)
 {
+    http = new HttpServer(this);
+
     if (!options.contains("port")) {
-        // FIXME: return an appropriate error
-        return false;
+        m_http_port = 0;
+    } else {
+        m_http_port = options.value("port").toUInt();
     }
 
-    if (options.contains("host")) {
-        return http_server(
-            options.value("port").toUInt(),
-            QHostAddress(options.value("host").toString()));
+    if (!options.contains("host")) {
+        m_http_address = QHostAddress::Any;
+    } else {
+        m_http_address = QHostAddress(options.value("host").toString());
     }
 
-    return http_server(options.value("port").toUInt());
+    m_http_set = true;
 };
 
 //!
@@ -444,21 +438,12 @@ inline bool Recurse::http_server(const QHash<QString, QVariant> &options)
 //!
 //! \param options QHash options of <QString, QVariant>
 //!
-//! \return true on success
-//!
-inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
+inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 {
-    if (!options.contains("port")) {
-        // FIXME: return an appropriate error
-        return false;
-    }
-
     https = new HttpsServer(this);
 
     m_https_options = &options;
     m_https_set = true;
-
-    return true;
 };
 
 //!
@@ -472,7 +457,7 @@ inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
 //!
 inline bool Recurse::listen(quint16 port, QHostAddress address)
 {
-    // if this function is called and m_http_set is true, ignore port
+    // if this function is called and m_http_set is true, ignore new values
     if (m_http_set) {
         return listen();
     }
@@ -497,18 +482,22 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
 //!
 inline bool Recurse::listen()
 {
-    if (m_http_set) {
-        http->compose(m_http_port, m_http_address);
-        connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
-    }
+    try {
+        if (m_http_set) {
+            http->compose(m_http_port, m_http_address);
+            connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
+        }
 
-    if (m_https_set) {
-        https->compose(*m_https_options);
-        connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
-    }
+        if (m_https_set) {
+            https->compose(*m_https_options);
+            connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
+        }
 
-    if (!m_http_set && !m_https_set) {
-        return listen(0);
+        if (!m_http_set && !m_https_set) {
+            return listen(0);
+        }
+    } catch (...) {
+        throw;
     }
 
     return app.exec();
