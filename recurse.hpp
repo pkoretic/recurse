@@ -140,6 +140,10 @@ inline void HttpServer::compose(quint16 port, QHostAddress address)
         throw "failed to start listening on port";
     }
 
+    qDebug() << "(http) started listening on host"
+        <<  m_tcp_server.serverAddress()
+        << "port" << m_tcp_server.serverPort();
+
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
         qDebug() << "client connected";
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
@@ -208,6 +212,10 @@ inline void HttpsServer::compose(quint16 port, QHostAddress address)
         qDebug() << "failed to start listening on port";
         throw "failed to start listening on port";
     }
+
+    qDebug() << "(https) started listening on host"
+        <<  m_tcp_server.serverAddress()
+        << "port" << m_tcp_server.serverPort();
 
     connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
         qDebug() << "secured connection ready";
