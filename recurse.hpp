@@ -108,6 +108,7 @@ signals:
 
 inline HttpServer::HttpServer(QObject *parent)
 {
+    // FIXME: is this necessary? it's unused
     m_parent = parent;
 };
 
@@ -207,7 +208,7 @@ inline bool HttpsServer::compose(quint16 port, QHostAddress address)
 inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
 {
     QByteArray priv_key;
-    QFile priv_key_file(options["private_key"].toString());
+    QFile priv_key_file(options.value("private_key").toString());
 
     if (priv_key_file.open(QIODevice::ReadOnly)) {
         priv_key = priv_key_file.readAll();
@@ -217,7 +218,7 @@ inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
     QSslKey ssl_key(priv_key, QSsl::Rsa);
 
     QByteArray cert_key;
-    QFile cert_key_file(options["certificate"].toString());
+    QFile cert_key_file(options.value("certificate").toString());
 
     if (cert_key_file.open(QIODevice::ReadOnly)) {
         cert_key = cert_key_file.readAll();
@@ -239,7 +240,15 @@ inline bool HttpsServer::compose(const QHash<QString, QVariant> &options)
         return false;
     }
 
-    return compose(options["port"].toUInt(), QHostAddress::LocalHost);
+    m_port = options.value("port").toUInt();
+
+    if (!options.contains("host")) {
+        m_address = QHostAddress::LocalHost;
+    } else {
+        m_address = QHostAddress(options.value("host").toString());
+    }
+
+    return compose(m_port, m_address);
 };
 
 //!
@@ -260,9 +269,12 @@ public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
+    bool http_server(quint16 port, QHostAddress address = QHostAddress::Any);
+    bool http_server(const QHash<QString, QVariant> &options);
+    bool https_server(const QHash<QString, QVariant> &options);
+
     bool listen(quint16 port, QHostAddress address = QHostAddress::Any);
-    bool listen(HttpServer *server);
-    bool listen(HttpsServer *server);
+    bool listen();
 
     void use(next_f next);
     void use(next_prev_f next);
@@ -281,11 +293,12 @@ private:
     HttpsServer *https;
 
     QVector<next_prev_f> m_middleware_next;
+    bool m_http_set = false;
+    bool m_https_set = false;
 
     void m_end(QVector<void_f> *middleware_prev);
     void m_send(Context *ctx);
     void m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
-    bool startEventLoop();
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -297,17 +310,6 @@ inline Recurse::~Recurse()
 {
     delete http;
     delete https;
-};
-
-//!
-//! \brief Recurse::startEventLoop
-//! starts a Qt build-in event loop
-//!
-//! \return true on success
-//!
-inline bool Recurse::startEventLoop()
-{
-    return app.exec();
 };
 
 //!
@@ -335,6 +337,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 
         qDebug() << ctx->request.body;
 
+        // TODO: copy middleware implementation from master branch
         /*
         if (m_middleware_next.count() > 0) {
             ctx->response.end = std::bind(&Recurse::m_end, this, middleware_prev);
@@ -349,6 +352,38 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     });
 
     return true;
+};
+
+inline bool Recurse::http_server(quint16 port, QHostAddress address)
+{
+    http = new HttpServer(this);
+    m_http_set = true;
+
+    return http->compose(port, address);
+};
+
+inline bool Recurse::http_server(const QHash<QString, QVariant> &options)
+{
+    if (!options.contains("port")) {
+        // FIXME: return an appropriate error
+        return false;
+    }
+
+    if (options.contains("host")) {
+        return http_server(
+            options.value("port").toUInt(),
+            QHostAddress(options.value("host").toString()));
+    }
+
+    return http_server(options.value("port").toUInt());
+};
+
+inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
+{
+    https = new HttpsServer(this);
+    m_https_set = true;
+
+    return https->compose(options);
 };
 
 //!
@@ -368,44 +403,20 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
-    return startEventLoop();
+
+    return app.exec();
 };
 
-//!
-//! \brief Recurse::listen
-//! listen for tcp requests
-//!
-//! overloaded function
-//!
-//! \param server pointer to the HttpServer instance
-//!
-//! \return true on success
-//!
-inline bool Recurse::listen(HttpServer *server)
+inline bool Recurse::listen()
 {
-    http = server;
+    if (m_http_set) {
+        connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
+    }
 
-    // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
-    connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
-    return startEventLoop();
-};
+    if (m_https_set) {
+        connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
+    }
 
-//!
-//! \brief Recurse::listen
-//! listen for tcp requests
-//!
-//! overloaded function
-//!
-//! \param server pointer to the HttpsServer instance
-//!
-//! \return true on success
-//!
-inline bool Recurse::listen(HttpsServer *server)
-{
-    https = server;
-
-    // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
-    connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
-    return startEventLoop();
+    return app.exec();
 };
 
