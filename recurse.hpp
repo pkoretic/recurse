@@ -491,6 +491,10 @@ inline bool Recurse::listen()
         connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
     }
 
+    if (!m_http_set && !m_https_set) {
+        return listen(0);
+    }
+
     return app.exec();
 };
 
