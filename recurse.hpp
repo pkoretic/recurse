@@ -190,7 +190,7 @@ inline HttpsServer::HttpsServer(QObject *parent)
 
 inline HttpsServer::~HttpsServer()
 {
-
+    delete m_parent;
 };
 
 //!
@@ -328,6 +328,9 @@ private:
     QVector<next_prev_f> m_middleware_next;
     bool m_http_set = false;
     bool m_https_set = false;
+    quint16 m_http_port;
+    QHostAddress m_http_address;
+    const QHash<QString, QVariant> *m_https_options;
 
     void m_end(QVector<void_f> *middleware_prev);
     void m_send(Context *ctx);
@@ -343,6 +346,7 @@ inline Recurse::~Recurse()
 {
     delete http;
     delete https;
+    delete m_https_options;
 };
 
 //!
@@ -401,9 +405,12 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 inline bool Recurse::http_server(quint16 port, QHostAddress address)
 {
     http = new HttpServer(this);
+
+    m_http_port = port;
+    m_http_address = address;
     m_http_set = true;
 
-    return http->compose(port, address);
+    return true;
 };
 
 //!
@@ -447,9 +454,11 @@ inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
     }
 
     https = new HttpsServer(this);
+
+    m_https_options = &options;
     m_https_set = true;
 
-    return https->compose(options);
+    return true;
 };
 
 //!
@@ -463,6 +472,11 @@ inline bool Recurse::https_server(const QHash<QString, QVariant> &options)
 //!
 inline bool Recurse::listen(quint16 port, QHostAddress address)
 {
+    // if this function is called and m_http_set is true, ignore port
+    if (m_http_set) {
+        port = m_http_port
+    }
+
     // if this function is called and m_http_set is false
     // set HttpServer instance, send reference to this object and prepare http connection
     http = new HttpServer(this);
@@ -484,10 +498,12 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
 inline bool Recurse::listen()
 {
     if (m_http_set) {
+        http->compose(m_http_port, m_http_address);
         connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
     }
 
     if (m_https_set) {
+        https->compose(*m_https_options);
         connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
     }
 
