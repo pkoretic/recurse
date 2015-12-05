@@ -51,5 +51,9 @@ int main(int argc, char *argv[])
     app.http_server(http_options);
     app.https_server(https_options);
 
-    app.listen();
+    try {
+        app.listen();
+    } catch (const char *error) {
+        qDebug() << "failed to start listening with" << error;
+    }
 };
