@@ -48,7 +48,11 @@ int main(int argc, char *argv[])
     https_options["private_key"] = "./priv.pem";
     https_options["certificate"] = "./cert.pem";
 
-    app.http_server(http_options);
+    Returns ret = app.http_server(http_options);
+    if (ret.error()) {
+        qDebug() << "got an error:" << ret.lastError();
+    }
+
     app.https_server(https_options);
 
     try {

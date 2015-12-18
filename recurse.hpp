@@ -17,6 +17,47 @@
 #include "context.hpp"
 
 //!
+//! \brief The Returns class
+//! Generic exit code and response value returning class
+//!
+class Returns
+{
+private:
+    quint16 m_last_error = 0;
+    QString m_result;
+
+    QHash<quint16, QString> codes
+    {
+        {100, "Failed to start listening on port"},
+        {101, "No pending connections available"}
+    };
+
+public:
+    QString lastError()
+    {
+        if (m_last_error == 0) {
+            return "No error";
+        } else {
+            return codes[m_last_error];
+        }
+    }
+
+    void setErrorCode(quint16 error_code)
+    {
+        m_last_error = error_code;
+    }
+
+    bool error()
+    {
+        if (m_last_error == 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+};
+
+//!
 //! \brief The SslTcpServer class
 //! Recurse ssl server implementation used for Recurse::HttpsServer
 //!
@@ -100,13 +141,14 @@ public:
     HttpServer(QObject *parent = NULL);
     ~HttpServer();
 
-    void compose(quint16 port, QHostAddress address = QHostAddress::Any);
+    Returns compose(quint16 port, QHostAddress address = QHostAddress::Any);
 
 private:
     QTcpServer m_tcp_server;
     quint16 m_port;
     QHostAddress m_address;
     QObject *m_parent;
+    Returns ret;
 
 signals:
     void socketReady(QTcpSocket *socket);
@@ -130,14 +172,15 @@ inline HttpServer::~HttpServer()
 //! \param port tcp server port
 //! \param address tcp server listening address
 //!
-inline void HttpServer::compose(quint16 port, QHostAddress address)
+inline Returns HttpServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
         qDebug() << "failed to start listening on port";
-        throw "failed to start listening on port";
+        ret.setErrorCode(100);
+        return ret;
     }
 
     qDebug() << "(http) started listening on host"
@@ -151,12 +194,20 @@ inline void HttpServer::compose(quint16 port, QHostAddress address)
         if (socket == 0) {
             qDebug() << "no connection?";
             delete socket;
-            // FIXME: send signal instead of throwing
-            throw "no pending connections available";
+            // FIXME: send signal instead of only setting an error and
+            // erroneously (?) returning
+            ret.setErrorCode(101);
+            return ret;
         }
 
         emit socketReady(socket);
+
+        ret.setErrorCode(0);
+        return ret;
     });
+
+    ret.setErrorCode(0);
+    return ret;
 };
 
 //!
@@ -171,7 +222,7 @@ public:
     HttpsServer(QObject *parent = NULL);
     ~HttpsServer();
 
-    void compose(quint16 port, QHostAddress address = QHostAddress::Any);
+    Returns compose(quint16 port, QHostAddress address = QHostAddress::Any);
     void compose(const QHash<QString, QVariant> &options);
 
 private:
@@ -179,6 +230,7 @@ private:
     quint16 m_port;
     QHostAddress m_address;
     QObject *m_parent;
+    Returns ret;
 
 signals:
     void socketReady(QTcpSocket *socket);
@@ -203,14 +255,15 @@ inline HttpsServer::~HttpsServer()
 //!
 //! \return true on success
 //!
-inline void HttpsServer::compose(quint16 port, QHostAddress address)
+inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
 {
     m_port = port;
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
         qDebug() << "failed to start listening on port";
-        throw "failed to start listening on port";
+        ret.setErrorCode(100);
+        return ret;
     }
 
     qDebug() << "(https) started listening on host"
@@ -226,11 +279,18 @@ inline void HttpsServer::compose(quint16 port, QHostAddress address)
             qDebug() << "no pending connections available";
             delete socket;
             // FIXME: send signal instead of throwing
-            throw "no pending connections available";
+            ret.setErrorCode(101);
+            return ret;
         }
 
         emit socketReady(socket);
+
+        ret.setErrorCode(0);
+        return ret;
     });
+
+    ret.setErrorCode(0);
+    return ret;
 };
 
 //!
@@ -242,7 +302,7 @@ inline void HttpsServer::compose(quint16 port, QHostAddress address)
 //!
 //! \return true on success
 //!
-inline void HttpsServer::compose(const QHash<QString, QVariant> &options)
+inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 {
     QByteArray priv_key;
     QFile priv_key_file(options.value("private_key").toString());
@@ -282,11 +342,13 @@ inline void HttpsServer::compose(const QHash<QString, QVariant> &options)
         m_address = QHostAddress(options.value("host").toString());
     }
 
-    try {
-        compose(m_port, m_address);
-    } catch (...) {
-        throw;
+    Returns r = compose(m_port, m_address);
+    if (r.error()) {
+        ff
     }
+
+    ret.setErrorCode(0);
+    return ret;
 };
 
 //!
@@ -329,6 +391,7 @@ private:
     QCoreApplication app;
     HttpServer *http;
     HttpsServer *https;
+    Returns ret;
 
     QVector<next_prev_f> m_middleware_next;
     bool m_http_set = false;
