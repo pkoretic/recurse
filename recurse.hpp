@@ -30,7 +30,8 @@ private:
     {
         {100, "Failed to start listening on port"},
         {101, "No pending connections available"},
-        {200, "Some app.exec() error"}
+        {200, "Generic app.exec() error"},
+        {201, "Another generic app.exec() error"}
     };
 
 public:
@@ -409,6 +410,8 @@ private:
     void m_end(QVector<void_f> *middleware_prev);
     void m_send(Context *ctx);
     void m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
+
+    quint16 appExitHandler(quint16 code);
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
@@ -465,6 +468,23 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     });
 
     return true;
+};
+
+//!
+//! \brief Recurse::appExitHandler
+//! acts according to the provided application event loop exit code
+//!
+//! \param code app.exec()'s exit code
+//!
+//! \return quint16 error code
+//!
+inline quint16 Recurse::appExitHandler(quint16 code)
+{
+    if (code == 1) {
+        return 201;
+    }
+
+    return 200;
 };
 
 //!
@@ -596,11 +616,11 @@ inline Returns Recurse::listen()
         return listen(0);
     }
 
-    auto ok = app.exec();
+    auto exit_code = app.exec();
 
-    if (ok != 0) {
+    if (exit_code != 0) {
         // TODO: set error code according to app.quit() or app.exit() method's code
-        ret.setErrorCode(200);
+        ret.setErrorCode(appExitHandler(exit_code));
         return ret;
     }
 
