@@ -598,7 +598,8 @@ inline Returns Recurse::listen()
 
     auto ok = app.exec();
 
-    if (!ok) {
+    if (ok != 0) {
+        // TODO: set error code according to app.quit() or app.exit() method's code
         ret.setErrorCode(200);
         return ret;
     }
