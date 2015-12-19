@@ -48,16 +48,11 @@ int main(int argc, char *argv[])
     https_options["private_key"] = "./priv.pem";
     https_options["certificate"] = "./cert.pem";
 
-    Returns ret = app.http_server(http_options);
-    if (ret.error()) {
-        qDebug() << "got an error:" << ret.lastError();
-    }
-
+    app.http_server(http_options);
     app.https_server(https_options);
 
-    try {
-        app.listen();
-    } catch (const char *error) {
-        qDebug() << "failed to start listening with" << error;
+    auto ret = app.listen();
+    if (ret.error()) {
+        qDebug() << "error upon listening:" << ret.lastError();
     }
 };

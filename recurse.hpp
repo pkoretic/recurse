@@ -29,7 +29,8 @@ private:
     QHash<quint16, QString> codes
     {
         {100, "Failed to start listening on port"},
-        {101, "No pending connections available"}
+        {101, "No pending connections available"},
+        {200, "Some app.exec() error"}
     };
 
 public:
@@ -45,6 +46,11 @@ public:
     void setErrorCode(quint16 error_code)
     {
         m_last_error = error_code;
+    }
+
+    quint16 errorCode()
+    {
+        return m_last_error;
     }
 
     bool error()
@@ -223,7 +229,7 @@ public:
     ~HttpsServer();
 
     Returns compose(quint16 port, QHostAddress address = QHostAddress::Any);
-    void compose(const QHash<QString, QVariant> &options);
+    Returns compose(const QHash<QString, QVariant> &options);
 
 private:
     SslTcpServer m_tcp_server;
@@ -342,9 +348,10 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
         m_address = QHostAddress(options.value("host").toString());
     }
 
-    Returns r = compose(m_port, m_address);
+    auto r = compose(m_port, m_address);
     if (r.error()) {
-        ff
+        ret.setErrorCode(r.errorCode());
+        return ret;
     }
 
     ret.setErrorCode(0);
@@ -372,9 +379,8 @@ public:
     void http_server(quint16 port, QHostAddress address = QHostAddress::Any);
     void http_server(const QHash<QString, QVariant> &options);
     void https_server(const QHash<QString, QVariant> &options);
-
-    bool listen(quint16 port, QHostAddress address = QHostAddress::Any);
-    bool listen();
+    Returns listen(quint16 port, QHostAddress address = QHostAddress::Any);
+    Returns listen();
 
     void use(next_f next);
     void use(next_prev_f next);
@@ -526,7 +532,7 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 //!
 //! \return true on success
 //!
-inline bool Recurse::listen(quint16 port, QHostAddress address)
+inline Returns Recurse::listen(quint16 port, QHostAddress address)
 {
     // if this function is called and m_http_set is true, ignore new values
     if (m_http_set) {
@@ -536,12 +542,25 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
     // if this function is called and m_http_set is false
     // set HttpServer instance, send reference to this object and prepare http connection
     http = new HttpServer(this);
-    http->compose(port, address);
+    auto r = http->compose(port, address);
+
+    if (r.error()) {
+        ret.setErrorCode(r.errorCode());
+        return ret;
+    }
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
 
-    return app.exec();
+    auto ok = app.exec();
+
+    if (!ok) {
+        ret.setErrorCode(200);
+        return ret;
+    }
+
+    ret.setErrorCode(0);
+    return ret;
 };
 
 //!
@@ -551,26 +570,40 @@ inline bool Recurse::listen(quint16 port, QHostAddress address)
 //!
 //! \return true on success
 //!
-inline bool Recurse::listen()
+inline Returns Recurse::listen()
 {
-    try {
-        if (m_http_set) {
-            http->compose(m_http_port, m_http_address);
-            connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
+    if (m_http_set) {
+        auto r = http->compose(m_http_port, m_http_address);
+        if (r.error()) {
+            ret.setErrorCode(r.errorCode());
+            return ret;
         }
 
-        if (m_https_set) {
-            https->compose(*m_https_options);
-            connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
-        }
-
-        if (!m_http_set && !m_https_set) {
-            return listen(0);
-        }
-    } catch (...) {
-        throw;
+        connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
     }
 
-    return app.exec();
+    if (m_https_set) {
+        auto r = https->compose(*m_https_options);
+        if (r.error()) {
+            ret.setErrorCode(r.errorCode());
+            return ret;
+        }
+
+        connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
+    }
+
+    if (!m_http_set && !m_https_set) {
+        return listen(0);
+    }
+
+    auto ok = app.exec();
+
+    if (!ok) {
+        ret.setErrorCode(200);
+        return ret;
+    }
+
+    ret.setErrorCode(0);
+    return ret;
 };
 
