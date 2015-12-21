@@ -18,6 +18,15 @@ int main(int argc, char *argv[])
     app.http_server(http_options);
     app.https_server(https_options);
 
+    app.use([](auto &ctx, auto next) {
+        qDebug() << "got a new request from" << ctx.request.ip;
+        next();
+    });
+
+    app.use([](auto &ctx) {
+        ctx.response.send("Hello, world");
+    });
+
     qDebug() << "start listening...";
 
     auto ret = app.listen();
