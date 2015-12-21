@@ -427,6 +427,140 @@ inline Recurse::~Recurse()
 };
 
 //!
+//! \brief Recurse::end
+//! final function to be called for creating/sending response
+//! \param request
+//! \param response
+//!
+inline void Recurse::m_end(QVector<void_f> *middleware_prev)
+{
+    qDebug() << "start upstream";
+
+    void_f prev_f = middleware_prev->at(middleware_prev->size()-1);
+    prev_f();
+};
+
+//!
+//! \brief Recurse::m_send
+//! used as last middleware (upstream) to be called
+//! sends response to client
+//! \param ctx
+//!
+inline void Recurse::m_send(Context *ctx)
+{
+    qDebug() << "end upstream";
+
+    auto request = ctx->request;
+    auto response = ctx->response;
+
+    response.method = request.method;
+    response.protocol = request.protocol;
+
+    QString reply = response.create_reply();
+
+    // send response to the client
+    request.socket->write(reply.toUtf8());
+
+    request.socket->disconnectFromHost();
+};
+
+//!
+//! \brief Recurse::m_next
+//! call next middleware
+//!
+inline void Recurse::m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev)
+{
+    qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
+
+    if (++current_middleware >= m_middleware_next.size()) {
+        return;
+    };
+
+    // save prev function
+    if (prev)
+        middleware_prev->push_back(prev);
+
+    // call next function with current prev
+    m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
+};
+
+//!
+//! \brief Recurse::use
+//! add new middleware
+//!
+//! \param f middleware function that will be called later
+//!
+//!
+//!
+inline void Recurse::use(next_prev_f f)
+{
+    m_middleware_next.push_back(f);
+};
+
+//!
+//! \brief Recurse::use
+//! overload function, next middleware only, no upstream
+//!
+//! \param f
+//!
+inline void Recurse::use(next_f f)
+{
+    m_middleware_next.push_back([f](Context &ctx,  void_ff next, void_f prev) {
+        f(ctx, [next, prev]() {
+            next([prev](){
+                prev();
+            });
+        });
+    });
+};
+
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! add multiple middlewares
+//! very useful for third party modules
+//!
+//! \param f vector of middlewares
+//!
+inline void Recurse::use(QVector<next_prev_f> f)
+{
+    for(const auto &g : f)
+        m_middleware_next.push_back(g);
+};
+
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! add multiple middlewares, no upstream
+//! \param f
+//!
+inline void Recurse::use(QVector<next_f> f)
+{
+    for(const auto &g : f)
+        m_middleware_next.push_back([g](Context &ctx,  void_ff next, void_f prev) {
+            g(ctx, [next, prev]() {
+                next([prev](){
+                    prev();
+                });
+            });
+        });
+};
+
+//!
+//! \brief Recurse::use
+//! overloaded function,
+//! final middleware that doesn't call next, used for returning response
+//!
+//! \param f final middleware function that will be called last
+//!
+inline void Recurse::use(final_f f)
+{
+    m_middleware_next.push_back([f](Context &ctx,  void_ff /* next */, void_f /* prev */) {
+        f(ctx);
+    });
+};
+
+//!
 //! \brief Recurse::handleConnection
 //! creates new recurse context for a tcp session
 //!
@@ -454,7 +588,6 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
         qDebug() << ctx->request.body;
 
         // TODO: copy middleware implementation from master branch
-        /*
         if (m_middleware_next.count() > 0) {
             ctx->response.end = std::bind(&Recurse::m_end, this, middleware_prev);
 
@@ -463,8 +596,12 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
                 std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
                 std::bind(&Recurse::m_send, this, ctx));
         }
-        */
+    });
 
+    connect(ctx->request.socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev] {
+        ctx->request.socket->deleteLater();
+        delete ctx;
+        delete middleware_prev;
     });
 
     return true;
