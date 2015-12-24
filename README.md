@@ -1,6 +1,6 @@
 # recurse
 
-Recurse is set to be modern micro web framework written in latest C++14 using
+Recurse is set to be a modern micro web framework written in latest C++14 using
 Qt library leveraging all the best features of both worlds.  We strongly
 emphasize on writing a clean and easy to understand code and avoid using
 templates to encourage contributions.
@@ -33,9 +33,11 @@ int main(int argc, char *argv[])
         ctx.response.send("Hello world");
     });
 
-
-    app.listen(3000);
-}
+    auto ret = app.listen(3000);
+    if (ret.error()) {
+        qDebug() << "app.listen failed with an error:" << ret.lastError();
+    }
+};
 
 ```
 main.pro
