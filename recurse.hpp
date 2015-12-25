@@ -587,7 +587,6 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 
         qDebug() << ctx->request.body;
 
-        // TODO: copy middleware implementation from master branch
         if (m_middleware_next.count() > 0) {
             ctx->response.end = std::bind(&Recurse::m_end, this, middleware_prev);
 
