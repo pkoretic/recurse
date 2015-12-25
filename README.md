@@ -1,4 +1,6 @@
-# recurse
+# [<img title="recurse-logo" src="http://i.imgur.com/4BoYnco.png" width="810px" alt="Recurse logo"/>](https://github.com/xwalk/recurse.git)
+
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
 Recurse is set to be a modern micro web framework written in latest C++14 using
 Qt library leveraging all the best features of both worlds.  We strongly
@@ -10,7 +12,6 @@ allow it to be very robust for writing next generation web applications and
 APIs.
 
 
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
 # Example
 
