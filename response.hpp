@@ -99,7 +99,7 @@ public:
             m_body = body;
 
         end();
-    };
+    }
 
     //!
     //! \brief send
@@ -237,6 +237,6 @@ inline QString Response::create_reply()
         reply += this->body();
 
     return reply;
-};
+}
 
 #endif

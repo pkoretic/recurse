@@ -104,7 +104,7 @@ protected:
 
         addPendingConnection(socket);
         socket->startServerEncryption();
-    };
+    }
 
 private:
     QSslConfiguration m_ssl_configuration;
@@ -113,12 +113,12 @@ private:
 inline SslTcpServer::SslTcpServer(QObject *parent)
 {
     Q_UNUSED(parent);
-};
+}
 
 inline SslTcpServer::~SslTcpServer()
 {
 
-};
+}
 
 //!
 //! \brief SslTcpServer::setSslConfiguration
@@ -129,12 +129,12 @@ inline SslTcpServer::~SslTcpServer()
 inline void SslTcpServer::setSslConfiguration(const QSslConfiguration &sslConfiguration)
 {
     m_ssl_configuration = sslConfiguration;
-};
+}
 
 inline QSslSocket *SslTcpServer::nextPendingConnection()
 {
     return static_cast<QSslSocket *>(QTcpServer::nextPendingConnection());
-};
+}
 
 //!
 //! \brief The HttpServer class
@@ -165,12 +165,12 @@ inline HttpServer::HttpServer(QObject *parent)
 {
     // FIXME: is this necessary? it's unused
     m_parent = parent;
-};
+}
 
 inline HttpServer::~HttpServer()
 {
 
-};
+}
 
 //!
 //! \brief HttpServer::compose
@@ -215,7 +215,7 @@ inline Returns HttpServer::compose(quint16 port, QHostAddress address)
 
     ret.setErrorCode(0);
     return ret;
-};
+}
 
 //!
 //! \brief The HttpsServer class
@@ -246,12 +246,12 @@ signals:
 inline HttpsServer::HttpsServer(QObject *parent)
 {
     m_parent = parent;
-};
+}
 
 inline HttpsServer::~HttpsServer()
 {
     delete m_parent;
-};
+}
 
 //!
 //! \brief HttpsServer::compose
@@ -298,7 +298,7 @@ inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
 
     ret.setErrorCode(0);
     return ret;
-};
+}
 
 //!
 //! \brief HttpsServer::compose
@@ -357,7 +357,7 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 
     ret.setErrorCode(0);
     return ret;
-};
+}
 
 //!
 //! \brief The Recurse class
@@ -417,14 +417,14 @@ private:
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
 {
     Q_UNUSED(parent);
-};
+}
 
 inline Recurse::~Recurse()
 {
     delete http;
     delete https;
     delete m_https_options;
-};
+}
 
 //!
 //! \brief Recurse::end
@@ -438,7 +438,7 @@ inline void Recurse::m_end(QVector<void_f> *middleware_prev)
 
     void_f prev_f = middleware_prev->at(middleware_prev->size()-1);
     prev_f();
-};
+}
 
 //!
 //! \brief Recurse::m_send
@@ -462,7 +462,7 @@ inline void Recurse::m_send(Context *ctx)
     request.socket->write(reply.toUtf8());
 
     request.socket->disconnectFromHost();
-};
+}
 
 //!
 //! \brief Recurse::m_next
@@ -482,7 +482,7 @@ inline void Recurse::m_next(void_f prev, Context *ctx, int current_middleware, Q
 
     // call next function with current prev
     m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
-};
+}
 
 //!
 //! \brief Recurse::use
@@ -495,7 +495,7 @@ inline void Recurse::m_next(void_f prev, Context *ctx, int current_middleware, Q
 inline void Recurse::use(next_prev_f f)
 {
     m_middleware_next.push_back(f);
-};
+}
 
 //!
 //! \brief Recurse::use
@@ -512,7 +512,7 @@ inline void Recurse::use(next_f f)
             });
         });
     });
-};
+}
 
 //!
 //! \brief Recurse::use
@@ -526,7 +526,7 @@ inline void Recurse::use(QVector<next_prev_f> f)
 {
     for(const auto &g : f)
         m_middleware_next.push_back(g);
-};
+}
 
 //!
 //! \brief Recurse::use
@@ -544,7 +544,7 @@ inline void Recurse::use(QVector<next_f> f)
                 });
             });
         });
-};
+}
 
 //!
 //! \brief Recurse::use
@@ -558,7 +558,7 @@ inline void Recurse::use(final_f f)
     m_middleware_next.push_back([f](Context &ctx,  void_ff /* next */, void_f /* prev */) {
         f(ctx);
     });
-};
+}
 
 //!
 //! \brief Recurse::handleConnection
@@ -604,7 +604,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     });
 
     return true;
-};
+}
 
 //!
 //! \brief Recurse::appExitHandler
@@ -621,7 +621,7 @@ inline quint16 Recurse::appExitHandler(quint16 code)
     }
 
     return 200;
-};
+}
 
 //!
 //! \brief Recurse::http_server
@@ -637,7 +637,7 @@ inline void Recurse::http_server(quint16 port, QHostAddress address)
     m_http_port = port;
     m_http_address = address;
     m_http_set = true;
-};
+}
 
 //!
 //! \brief Recurse::http_server
@@ -663,7 +663,7 @@ inline void Recurse::http_server(const QHash<QString, QVariant> &options)
     }
 
     m_http_set = true;
-};
+}
 
 //!
 //! \brief Recurse::https_server
@@ -677,7 +677,7 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 
     m_https_options = &options;
     m_https_set = true;
-};
+}
 
 //!
 //! \brief Recurse::listen
@@ -717,7 +717,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     ret.setErrorCode(0);
     return ret;
-};
+}
 
 //!
 //! \brief Recurse::listen
@@ -762,5 +762,5 @@ inline Returns Recurse::listen()
 
     ret.setErrorCode(0);
     return ret;
-};
+}
 
