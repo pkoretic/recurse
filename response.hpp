@@ -126,7 +126,8 @@ public:
     //!
     //! \param QString body optional, if provided this is sent instead of current data in buffer
     //!
-    void send(const QString &body = "") {
+    void send(const QString &body = "")
+    {
         if (body.size())
             m_body = body;
 
