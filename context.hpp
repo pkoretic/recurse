@@ -22,7 +22,11 @@ public:
     //! \param QString value of the data
     //! \return Context chainable
     //!
-    Context &set(const QString &key, const QVariant &value) {  m_data[key] = value; return *this; };
+    Context &set(const QString &key, const QVariant &value)
+    {
+        m_data[key] = value;
+        return *this;
+    }
 
     //!
     //! \brief get
@@ -31,7 +35,10 @@ public:
     //! \param QString key of the data
     //! \return QString value of the data
     //!
-    QVariant get(const QString &key) const { return m_data[key]; };
+    QVariant get(const QString &key) const
+    {
+        return m_data[key];
+    };
 
     //!
     //! \brief data

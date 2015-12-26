@@ -16,7 +16,10 @@ public:
     //! \param QString case-insensitive key of the header
     //! \return QString header
     //!
-    QString get(const QString &key) { return m_header[key.toLower()]; };
+    QString get(const QString &key)
+    {
+        return m_header[key.toLower()];
+    }
 
     //!
     //! \brief set
@@ -26,7 +29,11 @@ public:
     //! \param QString value for the header
     //! \return Response chainable
     //!
-    Response &set(const QString &key, const QString &value) { m_header[key.toLower()] = value.toLower(); return *this; };
+    Response &set(const QString &key, const QString &value)
+    {
+        m_header[key.toLower()] = value.toLower();
+        return *this;
+    }
 
     //!
     //! \brief status
@@ -34,7 +41,10 @@ public:
     //!
     //! \return quint16 status
     //!
-    quint16 status() const { return m_status; };
+    quint16 status() const
+    {
+        return m_status;
+    }
 
     //!
     //! \brief status
@@ -43,7 +53,11 @@ public:
     //! \param quint16 status
     //! \return Response chainable
     //!
-    Response &status(quint16 status) { m_status = status; return *this; };
+    Response &status(quint16 status)
+    {
+        m_status = status;
+        return *this;
+    }
 
     //!
     //! \brief type
@@ -51,7 +65,10 @@ public:
     //!
     //! \return QString MIME content-type
     //!
-    QString type() const { return m_header["content-type"]; };
+    QString type() const
+    {
+        return m_header["content-type"];
+    }
 
     //!
     //! \brief type
@@ -60,7 +77,11 @@ public:
     //! \param QString MIME type
     //! \return Response chainable
     //!
-    Response &type(const QString &type) { m_header["content-type"] = type.toLower(); return *this; };
+    Response &type(const QString &type)
+    {
+        m_header["content-type"] = type.toLower();
+        return *this;
+    }
 
     //!
     //! \brief body
@@ -68,7 +89,10 @@ public:
     //!
     //! \return QString response content
     //!
-    QString body() const { return m_body;};
+    QString body() const
+    {
+        return m_body;
+    }
 
     //!
     //! \brief body
@@ -77,7 +101,11 @@ public:
     //! \param QString body
     //! \return  Response chainable
     //!
-    Response &body(const QString &body) { m_body = body; return *this; };
+    Response &body(const QString &body)
+    {
+        m_body = body;
+        return *this;
+    }
 
     //!
     //! \brief write
@@ -86,7 +114,11 @@ public:
     //! \param QString data to be added
     //! \return Response chainable
     //!
-    Response &write(const QString &data) { m_body += data; return *this; };
+    Response &write(const QString &data)
+    {
+        m_body += data;
+        return *this;
+    }
 
     //!
     //! \brief send
@@ -107,7 +139,8 @@ public:
     //!
     //! \param body
     //!
-    void send(const QJsonDocument &body) {
+    void send(const QJsonDocument &body)
+    {
         type("application/json");
         m_body = body.toJson(QJsonDocument::Compact);
 

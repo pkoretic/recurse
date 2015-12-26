@@ -80,7 +80,10 @@ public:
     //! \param QString case-insensitive key of the header
     //! \return QString header value
     //!
-    QString get(const QString &key) { return m_header[key.toLower()]; };
+    QString get(const QString &key)
+    {
+        return m_header[key.toLower()];
+    }
 
 
     //!
