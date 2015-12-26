@@ -44,6 +44,12 @@ public:
     QString protocol;
 
     //!
+    //! \brief secure
+    //! Shorthand for protocol == "HTTPS" to check if a requet was issued via TLS
+    //!
+    bool secure = protocol == "HTTPS";
+
+    //!
     //! \brief url
     //! HTTP request url, eg: /helloworld
     //!
