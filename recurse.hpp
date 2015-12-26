@@ -407,9 +407,9 @@ private:
     QHostAddress m_http_address;
     const QHash<QString, QVariant> *m_https_options;
 
-    void m_end(QVector<void_f> *middleware_prev);
-    void m_send(Context *ctx);
-    void m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
+    void m_start_upstream(QVector<void_f> *middleware_prev);
+    void m_send_response(Context *ctx);
+    void m_call_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
 
     quint16 appExitHandler(quint16 code);
 };
@@ -432,21 +432,21 @@ inline Recurse::~Recurse()
 //! \param request
 //! \param response
 //!
-inline void Recurse::m_end(QVector<void_f> *middleware_prev)
+inline void Recurse::m_start_upstream(QVector<void_f> *middleware_prev)
 {
-    qDebug() << "start upstream";
+    qDebug() << "start upstream:" << middleware_prev->size();
 
     void_f prev_f = middleware_prev->at(middleware_prev->size()-1);
     prev_f();
 }
 
 //!
-//! \brief Recurse::m_send
+//! \brief Recurse::m_send_response
 //! used as last middleware (upstream) to be called
 //! sends response to client
 //! \param ctx
 //!
-inline void Recurse::m_send(Context *ctx)
+inline void Recurse::m_send_response(Context *ctx)
 {
     qDebug() << "end upstream";
 
@@ -465,10 +465,10 @@ inline void Recurse::m_send(Context *ctx)
 }
 
 //!
-//! \brief Recurse::m_next
+//! \brief Recurse::m_call_next
 //! call next middleware
 //!
-inline void Recurse::m_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev)
+inline void Recurse::m_call_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
 
@@ -481,7 +481,7 @@ inline void Recurse::m_next(void_f prev, Context *ctx, int current_middleware, Q
         middleware_prev->push_back(prev);
 
     // call next function with current prev
-    m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
+    m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_call_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
 }
 
 //!
@@ -588,12 +588,13 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
         qDebug() << ctx->request.body;
 
         if (m_middleware_next.count() > 0) {
-            ctx->response.end = std::bind(&Recurse::m_end, this, middleware_prev);
+            ctx->response.end = std::bind(&Recurse::m_start_upstream, this, middleware_prev);
+            middleware_prev->push_back(std::bind(&Recurse::m_send_response, this, ctx));
 
             m_middleware_next[0](
                 *ctx,
-                std::bind(&Recurse::m_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
-                std::bind(&Recurse::m_send, this, ctx));
+                std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
+                std::bind(&Recurse::m_send_response, this, ctx));
         }
     });
 
