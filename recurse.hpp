@@ -407,7 +407,7 @@ private:
     QHostAddress m_http_address;
     const QHash<QString, QVariant> *m_https_options;
 
-    void m_start_upstream(QVector<void_f> *middleware_prev);
+    void m_start_upstream(Context *ctx, QVector<void_f> *middleware_prev);
     void m_send_response(Context *ctx);
     void m_call_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
 
@@ -432,12 +432,15 @@ inline Recurse::~Recurse()
 //! \param request
 //! \param response
 //!
-inline void Recurse::m_start_upstream(QVector<void_f> *middleware_prev)
+inline void Recurse::m_start_upstream(Context *ctx, QVector<void_f> *middleware_prev)
 {
     qDebug() << "start upstream:" << middleware_prev->size();
 
-    void_f prev_f = middleware_prev->at(middleware_prev->size()-1);
-    prev_f();
+    // if there are no upstream middlewares send response directly
+    if(!middleware_prev->size())
+        m_send_response(ctx);
+    else
+        middleware_prev->at(middleware_prev->size()-1)();
 }
 
 //!
@@ -472,13 +475,14 @@ inline void Recurse::m_call_next(void_f prev, Context *ctx, int current_middlewa
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
 
-    if (++current_middleware >= m_middleware_next.size()) {
+    if(++current_middleware >= m_middleware_next.size()) {
         return;
-    };
+    }
 
-    // save prev function
-    if (prev)
+    // save previous middleware function
+    if(prev) {
         middleware_prev->push_back(prev);
+    }
 
     // call next function with current prev
     m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_call_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
@@ -573,6 +577,8 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     qDebug() << "handling new connection";
 
     auto middleware_prev = new QVector<void_f>;
+    middleware_prev->reserve(m_middleware_next.count());
+
     auto ctx = new Context;
     ctx->request.socket = socket;
 
@@ -585,16 +591,15 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
             return;
         }
 
-        qDebug() << ctx->request.body;
-
         if (m_middleware_next.count() > 0) {
-            ctx->response.end = std::bind(&Recurse::m_start_upstream, this, middleware_prev);
-            middleware_prev->push_back(std::bind(&Recurse::m_send_response, this, ctx));
+            ctx->response.end = std::bind(&Recurse::m_start_upstream, this, ctx, middleware_prev);
 
             m_middleware_next[0](
                 *ctx,
                 std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
                 std::bind(&Recurse::m_send_response, this, ctx));
+        }
+        else {
         }
     });
 
