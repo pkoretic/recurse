@@ -38,7 +38,7 @@ public:
     QVariant get(const QString &key) const
     {
         return m_data[key];
-    };
+    }
 
     //!
     //! \brief data
