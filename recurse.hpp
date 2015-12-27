@@ -31,7 +31,9 @@ private:
         {100, "Failed to start listening on port"},
         {101, "No pending connections available"},
         {200, "Generic app.exec() error"},
-        {201, "Another generic app.exec() error"}
+        {201, "Another generic app.exec() error"},
+        {301, "SSL private key open error"},
+        {302, "SSL certificate open error"}
     };
 
 public:
@@ -314,20 +316,28 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     QByteArray priv_key;
     QFile priv_key_file(options.value("private_key").toString());
 
-    if (priv_key_file.open(QIODevice::ReadOnly)) {
-        priv_key = priv_key_file.readAll();
-        priv_key_file.close();
+    if (!priv_key_file.open(QIODevice::ReadOnly)) {
+        qDebug() << "private_key open error:" << priv_key_file.errorString();
+        ret.setErrorCode(301);
+        return ret;
     }
+
+    priv_key = priv_key_file.readAll();
+    priv_key_file.close();
 
     QSslKey ssl_key(priv_key, QSsl::Rsa);
 
     QByteArray cert_key;
     QFile cert_key_file(options.value("certificate").toString());
 
-    if (cert_key_file.open(QIODevice::ReadOnly)) {
-        cert_key = cert_key_file.readAll();
-        cert_key_file.close();
+    if (!cert_key_file.open(QIODevice::ReadOnly)) {
+        qDebug() << "certificate open error:" << cert_key_file.errorString();
+        ret.setErrorCode(302);
+        return ret;
     }
+
+    cert_key = cert_key_file.readAll();
+    cert_key_file.close();
 
     QSslCertificate ssl_cert(cert_key);
 
