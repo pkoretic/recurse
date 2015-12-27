@@ -325,6 +325,11 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     priv_key = priv_key_file.readAll();
     priv_key_file.close();
 
+    if (priv_key.isEmpty()) {
+        ret.setErrorCode(301);
+        return ret;
+    }
+
     QSslKey ssl_key(priv_key, QSsl::Rsa);
 
     QByteArray cert_key;
@@ -338,6 +343,11 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 
     cert_key = cert_key_file.readAll();
     cert_key_file.close();
+
+    if (cert_key.isEmpty()) {
+        ret.setErrorCode(302);
+        return ret;
+    }
 
     QSslCertificate ssl_cert(cert_key);
 
