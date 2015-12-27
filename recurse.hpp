@@ -728,6 +728,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     if (r.error()) {
         ret.setErrorCode(r.errorCode());
+        app.exit(1);
         return ret;
     }
 
@@ -738,6 +739,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     if (!ok) {
         ret.setErrorCode(200);
+        app.exit(1);
         return ret;
     }
 
@@ -758,6 +760,7 @@ inline Returns Recurse::listen()
         auto r = http->compose(m_http_port, m_http_address);
         if (r.error()) {
             ret.setErrorCode(r.errorCode());
+            app.exit(1);
             return ret;
         }
 
@@ -768,6 +771,7 @@ inline Returns Recurse::listen()
         auto r = https->compose(*m_https_options);
         if (r.error()) {
             ret.setErrorCode(r.errorCode());
+            app.exit(1);
             return ret;
         }
 
