@@ -416,8 +416,8 @@ public slots:
 
 private:
     QCoreApplication app;
-    HttpServer *http;
-    HttpsServer *https;
+    HttpServer *http = NULL;
+    HttpsServer *https = NULL;
     Returns ret;
 
     QVector<next_prev_f> m_middleware_next;
@@ -425,7 +425,7 @@ private:
     bool m_https_set = false;
     quint16 m_http_port;
     QHostAddress m_http_address;
-    const QHash<QString, QVariant> *m_https_options;
+    QHash<QString, QVariant> m_https_options;
 
     void m_start_upstream(Context *ctx, QVector<void_f> *middleware_prev);
     void m_send_response(Context *ctx);
@@ -441,9 +441,8 @@ inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, a
 
 inline Recurse::~Recurse()
 {
-    delete http;
-    delete https;
-    delete m_https_options;
+    http->deleteLater();
+    https->deleteLater();
 }
 
 //!
@@ -701,7 +700,7 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 {
     https = new HttpsServer(this);
 
-    m_https_options = &options;
+    m_https_options = options;
     m_https_set = true;
 }
 
@@ -768,7 +767,7 @@ inline Returns Recurse::listen()
     }
 
     if (m_https_set) {
-        auto r = https->compose(*m_https_options);
+        auto r = https->compose(m_https_options);
         if (r.error()) {
             ret.setErrorCode(r.errorCode());
             app.exit(1);
