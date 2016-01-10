@@ -379,6 +379,15 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     return ret;
 }
 
+
+using void_f = std::function<void()>;
+using Prev = void_f;
+using Next = void_f;
+using NextPrev = std::function<void(Prev prev)>;
+using DownstreamUpstream = std::function<void(Context &ctx, NextPrev next, Prev prev)>;
+using Downstream = std::function<void(Context &ctx, Next next)>;
+using Final =  std::function<void(Context &ctx)>;
+
 //!
 //! \brief The Recurse class
 //! main class of the app
@@ -386,12 +395,6 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 class Recurse : public QObject
 {
     Q_OBJECT
-
-    using void_f = std::function<void()>;
-    using void_ff = std::function<void(void_f prev)>;
-    using next_prev_f = std::function<void(Context &ctx, void_ff next, void_f prev)>;
-    using next_f = std::function<void(Context &ctx, void_f next)>;
-    using final_f =  std::function<void(Context &ctx)>;
 
 public:
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
@@ -403,13 +406,13 @@ public:
     Returns listen(quint16 port, QHostAddress address = QHostAddress::Any);
     Returns listen();
 
-    void use(next_f next);
-    void use(next_prev_f next);
+    void use(Downstream next);
+    void use(DownstreamUpstream next);
 
-    void use(QVector<next_f> nexts);
-    void use(QVector<next_prev_f> nexts);
+    void use(QVector<Downstream> nexts);
+    void use(QVector<DownstreamUpstream> nexts);
 
-    void use(final_f next);
+    void use(Final next);
 
 public slots:
     bool handleConnection(QTcpSocket *socket);
@@ -420,16 +423,16 @@ private:
     HttpsServer *https = NULL;
     Returns ret;
 
-    QVector<next_prev_f> m_middleware_next;
+    QVector<DownstreamUpstream> m_middleware_next;
     bool m_http_set = false;
     bool m_https_set = false;
     quint16 m_http_port;
     QHostAddress m_http_address;
     QHash<QString, QVariant> m_https_options;
 
-    void m_start_upstream(Context *ctx, QVector<void_f> *middleware_prev);
+    void m_start_upstream(Context *ctx, QVector<Prev> *middleware_prev);
     void m_send_response(Context *ctx);
-    void m_call_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev);
+    void m_call_next(Prev prev, Context *ctx, int current_middleware, QVector<Prev> *middleware_prev);
 
     quint16 appExitHandler(quint16 code);
 };
@@ -490,7 +493,7 @@ inline void Recurse::m_send_response(Context *ctx)
 //! \brief Recurse::m_call_next
 //! call next middleware
 //!
-inline void Recurse::m_call_next(void_f prev, Context *ctx, int current_middleware, QVector<void_f> *middleware_prev)
+inline void Recurse::m_call_next(Prev prev, Context *ctx, int current_middleware, QVector<Prev> *middleware_prev)
 {
     qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
 
@@ -515,7 +518,7 @@ inline void Recurse::m_call_next(void_f prev, Context *ctx, int current_middlewa
 //!
 //!
 //!
-inline void Recurse::use(next_prev_f f)
+inline void Recurse::use(DownstreamUpstream f)
 {
     m_middleware_next.push_back(f);
 }
@@ -526,9 +529,9 @@ inline void Recurse::use(next_prev_f f)
 //!
 //! \param f
 //!
-inline void Recurse::use(next_f f)
+inline void Recurse::use(Downstream f)
 {
-    m_middleware_next.push_back([f](Context &ctx,  void_ff next, void_f prev) {
+    m_middleware_next.push_back([f](Context &ctx,  NextPrev next, Prev prev) {
         f(ctx, [next, prev]() {
             next([prev](){
                 prev();
@@ -545,7 +548,7 @@ inline void Recurse::use(next_f f)
 //!
 //! \param f vector of middlewares
 //!
-inline void Recurse::use(QVector<next_prev_f> f)
+inline void Recurse::use(QVector<DownstreamUpstream> f)
 {
     for(const auto &g : f)
         m_middleware_next.push_back(g);
@@ -557,10 +560,10 @@ inline void Recurse::use(QVector<next_prev_f> f)
 //! add multiple middlewares, no upstream
 //! \param f
 //!
-inline void Recurse::use(QVector<next_f> f)
+inline void Recurse::use(QVector<Downstream> f)
 {
     for(const auto &g : f)
-        m_middleware_next.push_back([g](Context &ctx,  void_ff next, void_f prev) {
+        m_middleware_next.push_back([g](Context &ctx,  NextPrev next, Prev prev) {
             g(ctx, [next, prev]() {
                 next([prev](){
                     prev();
@@ -576,9 +579,9 @@ inline void Recurse::use(QVector<next_f> f)
 //!
 //! \param f final middleware function that will be called last
 //!
-inline void Recurse::use(final_f f)
+inline void Recurse::use(Final f)
 {
-    m_middleware_next.push_back([f](Context &ctx,  void_ff /* next */, void_f /* prev */) {
+    m_middleware_next.push_back([f](Context &ctx,  NextPrev /* next */, Prev /* prev */) {
         f(ctx);
     });
 }
@@ -595,7 +598,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 {
     qDebug() << "handling new connection";
 
-    auto middleware_prev = new QVector<void_f>;
+    auto middleware_prev = new QVector<Prev>;
     middleware_prev->reserve(m_middleware_next.count());
 
     auto ctx = new Context;
@@ -792,4 +795,3 @@ inline Returns Recurse::listen()
     ret.setErrorCode(0);
     return ret;
 }
-
