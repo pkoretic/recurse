@@ -4,7 +4,6 @@
 */
 
 #include <recurse.hpp>
-#include <QHash>
 
 int main(int argc, char *argv[])
 {
