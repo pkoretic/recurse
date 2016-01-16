@@ -431,7 +431,7 @@ inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, a
 
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
-    QRegExp debug_strings("(recurse|production|development)");
+    QRegExp debug_strings("(recurse|development)");
     
     if (debug_strings.indexIn(env.value("DEBUG")) != -1) {
         m_debug = true;
