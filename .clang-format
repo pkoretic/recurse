@@ -1,5 +1,4 @@
 BasedOnStyle:  WebKit
-SpacesInSquareBrackets: true
 PointerAlignment: Right
 Standard:        Cpp11
 TabWidth:        4
