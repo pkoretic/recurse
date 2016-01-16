@@ -4,10 +4,10 @@
 #include <QTcpSocket>
 #include <QHash>
 
-class Request {
+class Request
+{
 
 public:
-
     //!
     //! \brief data
     //! client request buffer data
@@ -91,7 +91,6 @@ public:
         return m_header[key.toLower()];
     }
 
-
     //!
     //! \brief parse
     //! parse data from request
@@ -102,7 +101,6 @@ public:
     bool parse(QString request);
 
 private:
-
     //!
     //! \brief header
     //! HTTP request headers, eg: header["content-type"] = "text/plain"
@@ -116,7 +114,6 @@ private:
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 };
 
-
 inline bool Request::parse(QString request)
 {
     // buffer all data
@@ -126,7 +123,8 @@ inline bool Request::parse(QString request)
     this->ip = this->socket->peerAddress();
 
     // if no header is present, just append all data to request.body
-    if (!this->data.contains(httpRx)) {
+    if (!this->data.contains(httpRx))
+    {
         this->body.append(this->data);
         return true;
     }
@@ -134,8 +132,10 @@ inline bool Request::parse(QString request)
     QStringList data_list = this->data.split("\r\n");
     bool is_body = false;
 
-    for (int i = 0; i < data_list.size(); ++i) {
-        if (is_body) {
+    for (int i = 0; i < data_list.size(); ++i)
+    {
+        if (is_body)
+        {
             this->body.append(data_list.at(i));
             this->length += this->body.size();
             continue;
@@ -143,11 +143,13 @@ inline bool Request::parse(QString request)
 
         QStringList entity_item = data_list.at(i).split(":");
 
-        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body) {
+        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body)
+        {
             is_body = true;
             continue;
         }
-        else if (i == 0 && entity_item.length() < 2) {
+        else if (i == 0 && entity_item.length() < 2)
+        {
             QStringList first_line = entity_item.at(0).split(" ");
             this->method = first_line.at(0);
             this->url = first_line.at(1).trimmed();
@@ -162,14 +164,16 @@ inline bool Request::parse(QString request)
         this->hostname = m_header["host"];
 
     qDebug() << "this->object populated: "
-        << this->method << this->url << m_header << this->protocol << this->body
-        << this->hostname << this->ip
-        << this->length;
+             << this->method << this->url << m_header << this->protocol << this->body
+             << this->hostname << this->ip
+             << this->length;
 
     // extract cookies
     // eg: USER_TOKEN=Yes;test=val
-    if (m_header.contains("cookie")) {
-        for(const QString &cookie : this->get("cookie").split(";")) {
+    if (m_header.contains("cookie"))
+    {
+        for (const QString &cookie : this->get("cookie").split(";"))
+        {
             int split = cookie.trimmed().indexOf("=");
             if (split == -1)
                 continue;

@@ -24,12 +24,14 @@ int main(int argc, char *argv[])
     app.http_server(http_options);
     app.https_server(https_options);
 
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next)
+    {
         qDebug("incoming request over %s", ctx.request.secure ? "HTTPS" : "HTTP");
         next();
     });
 
-    app.use([](auto &ctx) {
+    app.use([](auto &ctx)
+    {
         QString response = QString("Hello world from: %1").arg(ctx.request.secure ? "HTTPS" : "HTTP");
         ctx.response.send(response);
     });
@@ -37,7 +39,8 @@ int main(int argc, char *argv[])
     qDebug() << "start listening...";
 
     auto ret = app.listen();
-    if (ret.error()) {
+    if (ret.error())
+    {
         qDebug() << "error upon listening:" << ret.lastError();
     }
 }

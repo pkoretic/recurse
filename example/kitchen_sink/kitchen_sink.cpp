@@ -13,13 +13,15 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // Start middleware, logger
-    app.use([](auto &ctx, auto next, auto prev) {
+    app.use([](auto &ctx, auto next, auto prev)
+    {
         QElapsedTimer time;
         time.start();
 
         qDebug() << "request started:" << ctx.request.ip;
 
-        next([=](){
+        next([=]()
+        {
             qDebug() << "last upstream mw: time taken:" << time.elapsed();
 
             prev();
@@ -28,14 +30,16 @@ int main(int argc, char *argv[])
     });
 
     // only next mw
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next)
+    {
         qDebug() << "request hostname:" << ctx.request.hostname;
 
         next();
     });
 
     // Second middleware, sets custom data
-    app.use([](auto &ctx, auto next, auto prev) {
+    app.use([](auto &ctx, auto next, auto prev)
+    {
         qDebug() << "routed request:" << ctx.request.get("user-agent");
 
         QString test("a");
@@ -45,7 +49,8 @@ int main(int argc, char *argv[])
         // for any kind of data use
         // ctx.data["key"] = *void
 
-        next([&ctx, test, prev](){
+        next([&ctx, test, prev]()
+        {
             qDebug() << "first upstream mw:" << test;
 
             // overrides response
@@ -56,7 +61,8 @@ int main(int argc, char *argv[])
     });
 
     // Final middleware, does long running action concurrently and sends response as json
-    app.use([](auto &ctx) {
+    app.use([](auto &ctx)
+    {
         auto &res = ctx.response;
 
         // show our custom data
@@ -70,19 +76,21 @@ int main(int argc, char *argv[])
         res.status(200).type("text/plain");
 
         // some long running action runs in thread pool
-        auto future = QtConcurrent::run([]{
-           qDebug() << "long running action...";
+        auto future = QtConcurrent::run([]
+        {
+            qDebug() << "long running action...";
 
-           QThread::sleep(1);
+            QThread::sleep(1);
 
-           // return our demo result
+            // return our demo result
 
-           return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
+            return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
         });
 
         // get results and send response to client
         auto watcher = new QFutureWatcher<QJsonDocument>;
-        QObject::connect(watcher, &QFutureWatcher<QJsonDocument>::finished,[&res, future]() {
+        QObject::connect(watcher, &QFutureWatcher<QJsonDocument>::finished, [&res, future]()
+        {
             qDebug() << "long running action done";
 
             // send our demo result
@@ -93,7 +101,8 @@ int main(int argc, char *argv[])
     });
 
     auto result = app.listen(3000);
-    if(result.error()) {
+    if (result.error())
+    {
         qDebug() << "error upon listening:" << result.lastError();
     }
 }

@@ -7,10 +7,10 @@
 #include "request.hpp"
 #include "response.hpp"
 
-class Context {
+class Context
+{
 
 public:
-
     Request request;
     Response response;
 
@@ -44,7 +44,7 @@ public:
     //! \brief data
     //! expose key/value data of *void pointer to allow any type of data
     //!
-    QHash<QString, void*> data;
+    QHash<QString, void *> data;
 
 private:
     //!

@@ -18,17 +18,20 @@ int main(int argc, char *argv[])
 
     // example other middleware
     // if we send data from here, last 404 middleware won't get called
-    app.use([](auto /* &ctx */, auto next) {
+    app.use([](auto /* &ctx */, auto next)
+    {
         next();
     });
 
     // if any middleware before this responds this won't get called
-    app.use([](auto &ctx) {
+    app.use([](auto &ctx)
+    {
         ctx.response.status(404).send("Not found");
     });
 
     auto result = app.listen(3000);
-    if(result.error()) {
+    if (result.error())
+    {
         qDebug() << "error upon listening:" << result.lastError();
     }
 }

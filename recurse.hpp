@@ -27,22 +27,24 @@ private:
     quint16 m_last_error = 0;
     QString m_result;
 
-    QHash<quint16, QString> codes
-    {
-        {100, "Failed to start listening on port"},
-        {101, "No pending connections available"},
-        {200, "Generic app->exec() error"},
-        {201, "Another generic app->exec() error"},
-        {301, "SSL private key open error"},
-        {302, "SSL certificate open error"}
+    QHash<quint16, QString> codes{
+        { 100, "Failed to start listening on port" },
+        { 101, "No pending connections available" },
+        { 200, "Generic app->exec() error" },
+        { 201, "Another generic app->exec() error" },
+        { 301, "SSL private key open error" },
+        { 302, "SSL certificate open error" }
     };
 
 public:
     QString lastError()
     {
-        if (m_last_error == 0) {
+        if (m_last_error == 0)
+        {
             return "No error";
-        } else {
+        }
+        else
+        {
             return codes[m_last_error];
         }
     }
@@ -59,9 +61,12 @@ public:
 
     bool error()
     {
-        if (m_last_error == 0) {
+        if (m_last_error == 0)
+        {
             return false;
-        } else {
+        }
+        else
+        {
             return true;
         }
     }
@@ -76,7 +81,7 @@ class SslTcpServer : public QTcpServer
     Q_OBJECT
     Q_DISABLE_COPY(SslTcpServer)
 
-    typedef void (QSslSocket::* RSslErrors)(const QList<QSslError> &);
+    typedef void (QSslSocket::*RSslErrors)(const QList<QSslError> &);
 
 public:
     SslTcpServer(QObject *parent = NULL);
@@ -85,8 +90,7 @@ public:
     QSslSocket *nextPendingConnection();
     void setSslConfiguration(const QSslConfiguration &sslConfiguration);
 
-Q_SIGNALS:
-    void connectionEncrypted();
+    Q_SIGNALS : void connectionEncrypted();
     void sslErrors(const QList<QSslError> &errors);
     void peerVerifyError(const QSslError &error);
 
@@ -120,7 +124,6 @@ inline SslTcpServer::SslTcpServer(QObject *parent)
 
 inline SslTcpServer::~SslTcpServer()
 {
-
 }
 
 //!
@@ -172,7 +175,6 @@ inline HttpServer::HttpServer(QObject *parent)
 
 inline HttpServer::~HttpServer()
 {
-
 }
 
 //!
@@ -187,15 +189,18 @@ inline Returns HttpServer::compose(quint16 port, QHostAddress address)
     m_port = port;
     m_address = address;
 
-    if (!m_tcp_server.listen(address, port)) {
+    if (!m_tcp_server.listen(address, port))
+    {
         ret.setErrorCode(100);
         return ret;
     }
 
-    connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
+    connect(&m_tcp_server, &QTcpServer::newConnection, [this]
+    {
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
-        if (socket == 0) {
+        if (socket == 0)
+        {
             delete socket;
             // FIXME: send signal instead of only setting an error and
             // erroneously (?) returning
@@ -263,15 +268,18 @@ inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
     m_port = port;
     m_address = address;
 
-    if (!m_tcp_server.listen(address, port)) {
+    if (!m_tcp_server.listen(address, port))
+    {
         ret.setErrorCode(100);
         return ret;
     }
 
-    connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
+    connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this]
+    {
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
-        if (socket == 0) {
+        if (socket == 0)
+        {
             delete socket;
             // FIXME: send signal instead of throwing
             ret.setErrorCode(101);
@@ -302,7 +310,8 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     QByteArray priv_key;
     QFile priv_key_file(options.value("private_key").toString());
 
-    if (!priv_key_file.open(QIODevice::ReadOnly)) {
+    if (!priv_key_file.open(QIODevice::ReadOnly))
+    {
         ret.setErrorCode(301);
         return ret;
     }
@@ -310,7 +319,8 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     priv_key = priv_key_file.readAll();
     priv_key_file.close();
 
-    if (priv_key.isEmpty()) {
+    if (priv_key.isEmpty())
+    {
         ret.setErrorCode(301);
         return ret;
     }
@@ -320,7 +330,8 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     QByteArray cert_key;
     QFile cert_key_file(options.value("certificate").toString());
 
-    if (!cert_key_file.open(QIODevice::ReadOnly)) {
+    if (!cert_key_file.open(QIODevice::ReadOnly))
+    {
         ret.setErrorCode(302);
         return ret;
     }
@@ -328,7 +339,8 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     cert_key = cert_key_file.readAll();
     cert_key_file.close();
 
-    if (cert_key.isEmpty()) {
+    if (cert_key.isEmpty())
+    {
         ret.setErrorCode(302);
         return ret;
     }
@@ -341,20 +353,27 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 
     m_tcp_server.setSslConfiguration(ssl_configuration);
 
-    if (!options.contains("port")) {
+    if (!options.contains("port"))
+    {
         m_port = 0;
-    } else {
+    }
+    else
+    {
         m_port = options.value("port").toUInt();
     }
 
-    if (!options.contains("host")) {
+    if (!options.contains("host"))
+    {
         m_address = QHostAddress::LocalHost;
-    } else {
+    }
+    else
+    {
         m_address = QHostAddress(options.value("host").toString());
     }
 
     auto r = compose(m_port, m_address);
-    if (r.error()) {
+    if (r.error())
+    {
         ret.setErrorCode(r.errorCode());
         return ret;
     }
@@ -363,14 +382,13 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     return ret;
 }
 
-
 using void_f = std::function<void()>;
 using Prev = void_f;
 using Next = void_f;
 using NextPrev = std::function<void(Prev prev)>;
 using DownstreamUpstream = std::function<void(Context &ctx, NextPrev next, Prev prev)>;
 using Downstream = std::function<void(Context &ctx, Next next)>;
-using Final =  std::function<void(Context &ctx)>;
+using Final = std::function<void(Context &ctx)>;
 
 //!
 //! \brief The Recurse class
@@ -382,7 +400,7 @@ class Recurse : public QObject
 
 public:
     Recurse(QCoreApplication *core_inst);
-    Recurse(int & argc, char ** argv, QObject *parent = NULL);
+    Recurse(int &argc, char **argv, QObject *parent = NULL);
     ~Recurse();
 
     void http_server(quint16 port, QHostAddress address = QHostAddress::Any);
@@ -426,18 +444,21 @@ private:
     void debug(QString message);
 };
 
-inline Recurse::Recurse(QCoreApplication *core_inst) : app(core_inst)
+inline Recurse::Recurse(QCoreApplication *core_inst)
+    : app(core_inst)
 {
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
     QRegExp debug_strings("(recurse|development)");
 
-    if (debug_strings.indexIn(env.value("DEBUG")) != -1) {
+    if (debug_strings.indexIn(env.value("DEBUG")) != -1)
+    {
         m_debug = true;
     }
 }
 
-inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : Recurse(new QCoreApplication(argc, argv))
+inline Recurse::Recurse(int &argc, char **argv, QObject *parent)
+    : Recurse(new QCoreApplication(argc, argv))
 {
     Q_UNUSED(parent);
     m_int_core = true;
@@ -456,7 +477,8 @@ inline Recurse::~Recurse()
 //!
 inline void Recurse::debug(QString message)
 {
-    if (m_debug) {
+    if (m_debug)
+    {
         qDebug().noquote() << "(recurse debug)" << message;
     }
 }
@@ -472,10 +494,10 @@ inline void Recurse::m_start_upstream(Context *ctx, QVector<void_f> *middleware_
     debug("start upstream: " + QString::number(middleware_prev->size()));
 
     // if there are no upstream middlewares send response directly
-    if(!middleware_prev->size())
+    if (!middleware_prev->size())
         m_send_response(ctx);
     else
-        middleware_prev->at(middleware_prev->size()-1)();
+        middleware_prev->at(middleware_prev->size() - 1)();
 }
 
 //!
@@ -510,17 +532,19 @@ inline void Recurse::m_call_next(Prev prev, Context *ctx, int current_middleware
 {
     debug("calling next: " + QString::number(current_middleware) + " num: " + QString::number(m_middleware_next.size()));
 
-    if(++current_middleware >= m_middleware_next.size()) {
+    if (++current_middleware >= m_middleware_next.size())
+    {
         return;
     }
 
     // save previous middleware function
-    if(prev) {
+    if (prev)
+    {
         middleware_prev->push_back(prev);
     }
 
     // call next function with current prev
-    m_middleware_next[current_middleware]( *ctx, std::bind(&Recurse::m_call_next, this,  std::placeholders::_1, ctx, current_middleware, middleware_prev), prev );
+    m_middleware_next[current_middleware](*ctx, std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
 }
 
 //!
@@ -544,9 +568,12 @@ inline void Recurse::use(DownstreamUpstream f)
 //!
 inline void Recurse::use(Downstream f)
 {
-    m_middleware_next.push_back([f](Context &ctx,  NextPrev next, Prev prev) {
-        f(ctx, [next, prev]() {
-            next([prev](){
+    m_middleware_next.push_back([f](Context &ctx, NextPrev next, Prev prev)
+    {
+        f(ctx, [next, prev]()
+        {
+            next([prev]()
+            {
                 prev();
             });
         });
@@ -563,7 +590,7 @@ inline void Recurse::use(Downstream f)
 //!
 inline void Recurse::use(QVector<DownstreamUpstream> f)
 {
-    for(const auto &g : f)
+    for (const auto &g : f)
         m_middleware_next.push_back(g);
 }
 
@@ -575,10 +602,13 @@ inline void Recurse::use(QVector<DownstreamUpstream> f)
 //!
 inline void Recurse::use(QVector<Downstream> f)
 {
-    for(const auto &g : f)
-        m_middleware_next.push_back([g](Context &ctx,  NextPrev next, Prev prev) {
-            g(ctx, [next, prev]() {
-                next([prev](){
+    for (const auto &g : f)
+        m_middleware_next.push_back([g](Context &ctx, NextPrev next, Prev prev)
+        {
+            g(ctx, [next, prev]()
+            {
+                next([prev]()
+                {
                     prev();
                 });
             });
@@ -594,7 +624,8 @@ inline void Recurse::use(QVector<Downstream> f)
 //!
 inline void Recurse::use(Final f)
 {
-    m_middleware_next.push_back([f](Context &ctx,  NextPrev /* next */, Prev /* prev */) {
+    m_middleware_next.push_back([f](Context &ctx, NextPrev /* next */, Prev /* prev */)
+    {
         f(ctx);
     });
 }
@@ -617,28 +648,33 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     auto ctx = new Context;
     ctx->request.socket = socket;
 
-    connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev] {
+    connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev]
+    {
         QString data(ctx->request.socket->readAll());
 
         ctx->request.parse(data);
 
-        if (ctx->request.length < ctx->request.get("content-length").toLongLong()) {
+        if (ctx->request.length < ctx->request.get("content-length").toLongLong())
+        {
             return;
         }
 
-        if (m_middleware_next.count() > 0) {
+        if (m_middleware_next.count() > 0)
+        {
             ctx->response.end = std::bind(&Recurse::m_start_upstream, this, ctx, middleware_prev);
 
             m_middleware_next[0](
-                *ctx,
-                std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
-                std::bind(&Recurse::m_send_response, this, ctx));
+            *ctx,
+            std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
+            std::bind(&Recurse::m_send_response, this, ctx));
         }
-        else {
+        else
+        {
         }
     });
 
-    connect(ctx->request.socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev] {
+    connect(ctx->request.socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev]
+    {
         ctx->request.socket->deleteLater();
         delete ctx;
         delete middleware_prev;
@@ -657,7 +693,8 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 //!
 inline quint16 Recurse::appExitHandler(quint16 code)
 {
-    if (code == 1) {
+    if (code == 1)
+    {
         return 201;
     }
 
@@ -693,15 +730,21 @@ inline void Recurse::http_server(const QHash<QString, QVariant> &options)
 {
     http = new HttpServer(this);
 
-    if (!options.contains("port")) {
+    if (!options.contains("port"))
+    {
         m_http_port = 0;
-    } else {
+    }
+    else
+    {
         m_http_port = options.value("port").toUInt();
     }
 
-    if (!options.contains("host")) {
+    if (!options.contains("host"))
+    {
         m_http_address = QHostAddress::Any;
-    } else {
+    }
+    else
+    {
         m_http_address = QHostAddress(options.value("host").toString());
     }
 
@@ -739,7 +782,8 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 inline Returns Recurse::listen(quint16 port, QHostAddress address)
 {
     // if this function is called and m_http_set is true, ignore new values
-    if (m_http_set) {
+    if (m_http_set)
+    {
         return listen();
     }
 
@@ -748,7 +792,8 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
     http = new HttpServer(this);
     auto r = http->compose(port, address);
 
-    if (r.error()) {
+    if (r.error())
+    {
         ret.setErrorCode(r.errorCode());
 
         debug("Recurse::listen http->compose error: " + ret.lastError());
@@ -759,10 +804,12 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
 
-    if (m_int_core) {
+    if (m_int_core)
+    {
         auto ok = app->exec();
 
-        if (!ok) {
+        if (!ok)
+        {
             ret.setErrorCode(200);
 
             debug("Recurse::listen exec error: " + ret.lastError());
@@ -786,9 +833,11 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 //!
 inline Returns Recurse::listen()
 {
-    if (m_http_set) {
+    if (m_http_set)
+    {
         auto r = http->compose(m_http_port, m_http_address);
-        if (r.error()) {
+        if (r.error())
+        {
             ret.setErrorCode(r.errorCode());
 
             debug("Recurse::listen http->compose error: " + ret.lastError());
@@ -799,9 +848,11 @@ inline Returns Recurse::listen()
         connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
     }
 
-    if (m_https_set) {
+    if (m_https_set)
+    {
         auto r = https->compose(m_https_options);
-        if (r.error()) {
+        if (r.error())
+        {
             ret.setErrorCode(r.errorCode());
 
             debug("Recurse::listen https->compose error: " + ret.lastError());
@@ -812,14 +863,17 @@ inline Returns Recurse::listen()
         connect(https, &HttpsServer::socketReady, this, &Recurse::handleConnection);
     }
 
-    if (!m_http_set && !m_https_set) {
+    if (!m_http_set && !m_https_set)
+    {
         return listen(0);
     }
 
-    if (m_int_core) {
+    if (m_int_core)
+    {
         auto exit_code = app->exec();
 
-        if (exit_code != 0) {
+        if (exit_code != 0)
+        {
             // TODO: set error code according to app.quit() or app->exit() method's code
             ret.setErrorCode(appExitHandler(exit_code));
 
