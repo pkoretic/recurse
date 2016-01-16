@@ -31,8 +31,8 @@ private:
     {
         {100, "Failed to start listening on port"},
         {101, "No pending connections available"},
-        {200, "Generic app.exec() error"},
-        {201, "Another generic app.exec() error"},
+        {200, "Generic app->exec() error"},
+        {201, "Another generic app->exec() error"},
         {301, "SSL private key open error"},
         {302, "SSL certificate open error"}
     };
@@ -381,6 +381,7 @@ class Recurse : public QObject
     Q_OBJECT
 
 public:
+    Recurse(QCoreApplication *core_inst);
     Recurse(int & argc, char ** argv, QObject *parent = NULL);
     ~Recurse();
 
@@ -402,7 +403,7 @@ public slots:
     bool handleConnection(QTcpSocket *socket);
 
 private:
-    QCoreApplication app;
+    QCoreApplication *app = NULL;
     HttpServer *http = NULL;
     HttpsServer *https = NULL;
     Returns ret;
@@ -414,6 +415,7 @@ private:
     QHostAddress m_http_address;
     QHash<QString, QVariant> m_https_options;
     bool m_debug = false;
+    bool m_int_core = false;
 
     void m_start_upstream(Context *ctx, QVector<Prev> *middleware_prev);
     void m_send_response(Context *ctx);
@@ -422,24 +424,28 @@ private:
     quint16 appExitHandler(quint16 code);
 
     void debug(QString message);
-    // void debug(QString message, QString section);
 };
 
-inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
+inline Recurse::Recurse(QCoreApplication *core_inst) : app(core_inst)
 {
-    Q_UNUSED(parent);
-
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
     QRegExp debug_strings("(recurse|development)");
-    
+
     if (debug_strings.indexIn(env.value("DEBUG")) != -1) {
         m_debug = true;
     }
 }
 
+inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : Recurse(new QCoreApplication(argc, argv))
+{
+    Q_UNUSED(parent);
+    m_int_core = true;
+}
+
 inline Recurse::~Recurse()
 {
+    app->deleteLater();
     http->deleteLater();
     https->deleteLater();
 }
@@ -645,7 +651,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 //! \brief Recurse::appExitHandler
 //! acts according to the provided application event loop exit code
 //!
-//! \param code app.exec()'s exit code
+//! \param code app->exec()'s exit code
 //!
 //! \return quint16 error code
 //!
@@ -746,24 +752,26 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
         ret.setErrorCode(r.errorCode());
 
         debug("Recurse::listen http->compose error: " + ret.lastError());
-        app.exit(1);
+        app->exit(1);
         return ret;
     }
 
     // connect HttpServer signal 'socketReady' to this class' 'handleConnection' slot
     connect(http, &HttpServer::socketReady, this, &Recurse::handleConnection);
 
-    auto ok = app.exec();
+    if (m_int_core) {
+        auto ok = app->exec();
 
-    if (!ok) {
-        ret.setErrorCode(200);
+        if (!ok) {
+            ret.setErrorCode(200);
 
-        debug("Recurse::listen exec error: " + ret.lastError());
-        app.exit(1);
-        return ret;
+            debug("Recurse::listen exec error: " + ret.lastError());
+            app->exit(1);
+            return ret;
+        }
+
+        debug("main loop exited");
     }
-
-    debug("main loop exited");
 
     ret.setErrorCode(0);
     return ret;
@@ -784,7 +792,7 @@ inline Returns Recurse::listen()
             ret.setErrorCode(r.errorCode());
 
             debug("Recurse::listen http->compose error: " + ret.lastError());
-            app.exit(1);
+            app->exit(1);
             return ret;
         }
 
@@ -797,7 +805,7 @@ inline Returns Recurse::listen()
             ret.setErrorCode(r.errorCode());
 
             debug("Recurse::listen https->compose error: " + ret.lastError());
-            app.exit(1);
+            app->exit(1);
             return ret;
         }
 
@@ -808,17 +816,19 @@ inline Returns Recurse::listen()
         return listen(0);
     }
 
-    auto exit_code = app.exec();
+    if (m_int_core) {
+        auto exit_code = app->exec();
 
-    if (exit_code != 0) {
-        // TODO: set error code according to app.quit() or app.exit() method's code
-        ret.setErrorCode(appExitHandler(exit_code));
+        if (exit_code != 0) {
+            // TODO: set error code according to app.quit() or app->exit() method's code
+            ret.setErrorCode(appExitHandler(exit_code));
 
-        debug("Recurse::listen app.exec() return error: " + ret.lastError());
-        return ret;
+            debug("Recurse::listen app->exec() return error: " + ret.lastError());
+            return ret;
+        }
+
+        debug("main loop exited");
     }
-
-    debug("main loop exited");
 
     ret.setErrorCode(0);
     return ret;
