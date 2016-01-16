@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QHostAddress>
 #include <QObject>
+#include <QProcessEnvironment>
 #include <QSslCertificate>
 #include <QSslConfiguration>
 #include <QSslKey>
@@ -187,21 +188,14 @@ inline Returns HttpServer::compose(quint16 port, QHostAddress address)
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
-        qDebug() << "failed to start listening on port";
         ret.setErrorCode(100);
         return ret;
     }
 
-    qDebug() << "(http) started listening on host"
-        <<  m_tcp_server.serverAddress()
-        << "port" << m_tcp_server.serverPort();
-
     connect(&m_tcp_server, &QTcpServer::newConnection, [this] {
-        qDebug() << "client connected";
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
         if (socket == 0) {
-            qDebug() << "no connection?";
             delete socket;
             // FIXME: send signal instead of only setting an error and
             // erroneously (?) returning
@@ -270,22 +264,14 @@ inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
     m_address = address;
 
     if (!m_tcp_server.listen(address, port)) {
-        qDebug() << "failed to start listening on port";
         ret.setErrorCode(100);
         return ret;
     }
 
-    qDebug() << "(https) started listening on host"
-        <<  m_tcp_server.serverAddress()
-        << "port" << m_tcp_server.serverPort();
-
     connect(&m_tcp_server, &SslTcpServer::connectionEncrypted, [this] {
-        qDebug() << "secured connection ready";
-
         QTcpSocket *socket = m_tcp_server.nextPendingConnection();
 
         if (socket == 0) {
-            qDebug() << "no pending connections available";
             delete socket;
             // FIXME: send signal instead of throwing
             ret.setErrorCode(101);
@@ -317,7 +303,6 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     QFile priv_key_file(options.value("private_key").toString());
 
     if (!priv_key_file.open(QIODevice::ReadOnly)) {
-        qDebug() << "private_key open error:" << priv_key_file.errorString();
         ret.setErrorCode(301);
         return ret;
     }
@@ -336,7 +321,6 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     QFile cert_key_file(options.value("certificate").toString());
 
     if (!cert_key_file.open(QIODevice::ReadOnly)) {
-        qDebug() << "certificate open error:" << cert_key_file.errorString();
         ret.setErrorCode(302);
         return ret;
     }
@@ -429,23 +413,46 @@ private:
     quint16 m_http_port;
     QHostAddress m_http_address;
     QHash<QString, QVariant> m_https_options;
+    bool m_debug = false;
 
     void m_start_upstream(Context *ctx, QVector<Prev> *middleware_prev);
     void m_send_response(Context *ctx);
     void m_call_next(Prev prev, Context *ctx, int current_middleware, QVector<Prev> *middleware_prev);
 
     quint16 appExitHandler(quint16 code);
+
+    void debug(QString message);
+    // void debug(QString message, QString section);
 };
 
 inline Recurse::Recurse(int & argc, char ** argv, QObject *parent) : app(argc, argv)
 {
     Q_UNUSED(parent);
+
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+
+    QRegExp debug_strings("(recurse|production|development)");
+    
+    if (debug_strings.indexIn(env.value("DEBUG")) != -1) {
+        m_debug = true;
+    }
 }
 
 inline Recurse::~Recurse()
 {
     http->deleteLater();
     https->deleteLater();
+}
+
+//!
+//! \brief Recurse::debug
+//! qDebug wrapper based on RECURSE_DEBUG environment variable
+//!
+inline void Recurse::debug(QString message)
+{
+    if (m_debug) {
+        qDebug().noquote() << "(recurse debug)" << message;
+    }
 }
 
 //!
@@ -456,7 +463,7 @@ inline Recurse::~Recurse()
 //!
 inline void Recurse::m_start_upstream(Context *ctx, QVector<void_f> *middleware_prev)
 {
-    qDebug() << "start upstream:" << middleware_prev->size();
+    debug("start upstream: " + QString::number(middleware_prev->size()));
 
     // if there are no upstream middlewares send response directly
     if(!middleware_prev->size())
@@ -473,7 +480,7 @@ inline void Recurse::m_start_upstream(Context *ctx, QVector<void_f> *middleware_
 //!
 inline void Recurse::m_send_response(Context *ctx)
 {
-    qDebug() << "end upstream";
+    debug("end upstream");
 
     auto request = ctx->request;
     auto response = ctx->response;
@@ -495,7 +502,7 @@ inline void Recurse::m_send_response(Context *ctx)
 //!
 inline void Recurse::m_call_next(Prev prev, Context *ctx, int current_middleware, QVector<Prev> *middleware_prev)
 {
-    qDebug() << "calling next:" << current_middleware << " num:" << m_middleware_next.size();
+    debug("calling next: " + QString::number(current_middleware) + " num: " + QString::number(m_middleware_next.size()));
 
     if(++current_middleware >= m_middleware_next.size()) {
         return;
@@ -596,7 +603,7 @@ inline void Recurse::use(Final f)
 //!
 inline bool Recurse::handleConnection(QTcpSocket *socket)
 {
-    qDebug() << "handling new connection";
+    debug("handling new connection");
 
     auto middleware_prev = new QVector<Prev>;
     middleware_prev->reserve(m_middleware_next.count());
@@ -665,6 +672,8 @@ inline void Recurse::http_server(quint16 port, QHostAddress address)
     m_http_port = port;
     m_http_address = address;
     m_http_set = true;
+
+    debug("http server setup done");
 }
 
 //!
@@ -691,6 +700,9 @@ inline void Recurse::http_server(const QHash<QString, QVariant> &options)
     }
 
     m_http_set = true;
+
+    std::bind(&Recurse::debug, std::placeholders::_1, "http");
+    debug("http server setup done");
 }
 
 //!
@@ -705,6 +717,8 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 
     m_https_options = options;
     m_https_set = true;
+
+    debug("https server setup done");
 }
 
 //!
@@ -730,6 +744,8 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     if (r.error()) {
         ret.setErrorCode(r.errorCode());
+
+        debug("Recurse::listen http->compose error: " + ret.lastError());
         app.exit(1);
         return ret;
     }
@@ -741,9 +757,13 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     if (!ok) {
         ret.setErrorCode(200);
+
+        debug("Recurse::listen exec error: " + ret.lastError());
         app.exit(1);
         return ret;
     }
+
+    debug("main loop exited");
 
     ret.setErrorCode(0);
     return ret;
@@ -762,6 +782,8 @@ inline Returns Recurse::listen()
         auto r = http->compose(m_http_port, m_http_address);
         if (r.error()) {
             ret.setErrorCode(r.errorCode());
+
+            debug("Recurse::listen http->compose error: " + ret.lastError());
             app.exit(1);
             return ret;
         }
@@ -773,6 +795,8 @@ inline Returns Recurse::listen()
         auto r = https->compose(m_https_options);
         if (r.error()) {
             ret.setErrorCode(r.errorCode());
+
+            debug("Recurse::listen https->compose error: " + ret.lastError());
             app.exit(1);
             return ret;
         }
@@ -789,8 +813,12 @@ inline Returns Recurse::listen()
     if (exit_code != 0) {
         // TODO: set error code according to app.quit() or app.exit() method's code
         ret.setErrorCode(appExitHandler(exit_code));
+
+        debug("Recurse::listen app.exec() return error: " + ret.lastError());
         return ret;
     }
+
+    debug("main loop exited");
 
     ret.setErrorCode(0);
     return ret;
