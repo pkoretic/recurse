@@ -1,0 +1,11 @@
+BasedOnStyle:  WebKit
+SpacesInSquareBrackets: true
+PointerAlignment: Right
+Standard:        Cpp11
+TabWidth:        4
+UseTab:          Never
+BreakBeforeBraces: Allman
+AllowShortFunctionsOnASingleLine: false
+ContinuationIndentWidth: 0
+IndentCaseLabels: true
+
