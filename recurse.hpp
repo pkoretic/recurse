@@ -746,7 +746,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
         return listen();
 
     // if this function is called and m_http_set is false
-    // set HttpServer instance, send reference to this object and prepare http connection
+    // set HttpServer instance and prepare an http connection
     http = new HttpServer();
     auto r = http->compose(port, address);
 
