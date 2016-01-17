@@ -152,7 +152,6 @@ private:
     QTcpServer m_tcp_server;
     quint16 m_port;
     QHostAddress m_address;
-    QObject *m_parent;
     Returns ret;
 
 signals:
@@ -161,8 +160,7 @@ signals:
 
 inline HttpServer::HttpServer(QObject *parent)
 {
-    // FIXME: is this necessary? it's unused
-    m_parent = parent;
+    Q_UNUSED(parent);
 }
 
 inline HttpServer::~HttpServer()
@@ -229,7 +227,6 @@ private:
     SslTcpServer m_tcp_server;
     quint16 m_port;
     QHostAddress m_address;
-    QObject *m_parent;
     Returns ret;
 
 signals:
@@ -238,12 +235,11 @@ signals:
 
 inline HttpsServer::HttpsServer(QObject *parent)
 {
-    m_parent = parent;
+    Q_UNUSED(parent);
 }
 
 inline HttpsServer::~HttpsServer()
 {
-    delete m_parent;
 }
 
 //!
@@ -682,7 +678,7 @@ inline quint16 Recurse::appExitHandler(quint16 code)
 //!
 inline void Recurse::http_server(quint16 port, QHostAddress address)
 {
-    http = new HttpServer(this);
+    http = new HttpServer();
 
     m_http_port = port;
     m_http_address = address;
@@ -700,7 +696,7 @@ inline void Recurse::http_server(quint16 port, QHostAddress address)
 //!
 inline void Recurse::http_server(const QHash<QString, QVariant> &options)
 {
-    http = new HttpServer(this);
+    http = new HttpServer();
 
     if (!options.contains("port"))
         m_http_port = 0;
@@ -751,7 +747,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 
     // if this function is called and m_http_set is false
     // set HttpServer instance, send reference to this object and prepare http connection
-    http = new HttpServer(this);
+    http = new HttpServer();
     auto r = http->compose(port, address);
 
     if (r.error())
