@@ -40,13 +40,9 @@ public:
     QString lastError()
     {
         if (m_last_error == 0)
-        {
             return "No error";
-        }
         else
-        {
             return codes[m_last_error];
-        }
     }
 
     void setErrorCode(quint16 error_code)
@@ -62,13 +58,9 @@ public:
     bool error()
     {
         if (m_last_error == 0)
-        {
             return false;
-        }
         else
-        {
             return true;
-        }
     }
 };
 
@@ -354,22 +346,14 @@ inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
     m_tcp_server.setSslConfiguration(ssl_configuration);
 
     if (!options.contains("port"))
-    {
         m_port = 0;
-    }
     else
-    {
         m_port = options.value("port").toUInt();
-    }
 
     if (!options.contains("host"))
-    {
         m_address = QHostAddress::LocalHost;
-    }
     else
-    {
         m_address = QHostAddress(options.value("host").toString());
-    }
 
     auto r = compose(m_port, m_address);
     if (r.error())
@@ -452,9 +436,7 @@ inline Recurse::Recurse(QCoreApplication *core_inst)
     QRegExp debug_strings("(recurse|development)");
 
     if (debug_strings.indexIn(env.value("DEBUG")) != -1)
-    {
         m_debug = true;
-    }
 }
 
 inline Recurse::Recurse(int &argc, char **argv, QObject *parent)
@@ -478,9 +460,7 @@ inline Recurse::~Recurse()
 inline void Recurse::debug(QString message)
 {
     if (m_debug)
-    {
         qDebug().noquote() << "(recurse debug)" << message;
-    }
 }
 
 //!
@@ -533,15 +513,11 @@ inline void Recurse::m_call_next(Prev prev, Context *ctx, int current_middleware
     debug("calling next: " + QString::number(current_middleware) + " num: " + QString::number(m_middleware_next.size()));
 
     if (++current_middleware >= m_middleware_next.size())
-    {
         return;
-    }
 
     // save previous middleware function
     if (prev)
-    {
         middleware_prev->push_back(prev);
-    }
 
     // call next function with current prev
     m_middleware_next[current_middleware](*ctx, std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
@@ -655,9 +631,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
         ctx->request.parse(data);
 
         if (ctx->request.length < ctx->request.get("content-length").toLongLong())
-        {
             return;
-        }
 
         if (m_middleware_next.count() > 0)
         {
@@ -694,9 +668,7 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 inline quint16 Recurse::appExitHandler(quint16 code)
 {
     if (code == 1)
-    {
         return 201;
-    }
 
     return 200;
 }
@@ -731,22 +703,14 @@ inline void Recurse::http_server(const QHash<QString, QVariant> &options)
     http = new HttpServer(this);
 
     if (!options.contains("port"))
-    {
         m_http_port = 0;
-    }
     else
-    {
         m_http_port = options.value("port").toUInt();
-    }
 
     if (!options.contains("host"))
-    {
         m_http_address = QHostAddress::Any;
-    }
     else
-    {
         m_http_address = QHostAddress(options.value("host").toString());
-    }
 
     m_http_set = true;
 
@@ -783,9 +747,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 {
     // if this function is called and m_http_set is true, ignore new values
     if (m_http_set)
-    {
         return listen();
-    }
 
     // if this function is called and m_http_set is false
     // set HttpServer instance, send reference to this object and prepare http connection
@@ -864,9 +826,7 @@ inline Returns Recurse::listen()
     }
 
     if (!m_http_set && !m_https_set)
-    {
         return listen(0);
-    }
 
     if (m_int_core)
     {
