@@ -261,7 +261,7 @@ inline HttpsServer::~HttpsServer()
 //! \param port tcp server port
 //! \param address tcp server listening address
 //!
-//! \return true on success
+//! \return Returns return execution status code
 //!
 inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
 {
@@ -303,7 +303,7 @@ inline Returns HttpsServer::compose(quint16 port, QHostAddress address)
 //!
 //! \param options QHash options of <QString, QVariant>
 //!
-//! \return true on success
+//! \return Returns return execution status code
 //!
 inline Returns HttpsServer::compose(const QHash<QString, QVariant> &options)
 {
@@ -636,7 +636,7 @@ inline void Recurse::use(Final f)
 //!
 //! \param pointer to the socket sent from http/https server
 //!
-//! \return true on success
+//! \return Returns return execution status code
 //!
 inline bool Recurse::handleConnection(QTcpSocket *socket)
 {
@@ -777,7 +777,7 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 //! \param port tcp server port
 //! \param address tcp server listening address
 //!
-//! \return true on success
+//! \return Returns return execution status code
 //!
 inline Returns Recurse::listen(quint16 port, QHostAddress address)
 {
@@ -829,7 +829,7 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 //! overloaded function,
 //! listen for tcp requests
 //!
-//! \return true on success
+//! \return Returns return execution status code
 //!
 inline Returns Recurse::listen()
 {
