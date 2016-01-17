@@ -7,3 +7,4 @@ BreakBeforeBraces: Allman
 AllowShortFunctionsOnASingleLine: false
 ContinuationIndentWidth: 0
 IndentCaseLabels: true
+MaxEmptyLinesToKeep: 1
