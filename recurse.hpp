@@ -12,6 +12,7 @@
 #include <QTcpSocket>
 #include <QVector>
 #include <functional>
+#include <iostream>
 
 #include "request.hpp"
 #include "response.hpp"
@@ -451,12 +452,12 @@ inline Recurse::~Recurse()
 
 //!
 //! \brief Recurse::debug
-//! qDebug wrapper based on RECURSE_DEBUG environment variable
+//! Console debugging output wrapper based on RECURSE_DEBUG environment variable
 //!
 inline void Recurse::debug(QString message)
 {
     if (m_debug)
-        qDebug().noquote() << "(recurse debug)" << message;
+        std::cout << "(recurse debug) " << message.toStdString() << std::endl;
 }
 
 //!
