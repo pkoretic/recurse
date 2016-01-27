@@ -45,7 +45,7 @@ public:
 
     //!
     //! \brief secure
-    //! Shorthand for protocol == "HTTPS" to check if a requet was issued via TLS
+    //! Shorthand for protocol == "HTTPS" to check if a request was issued via TLS
     //!
     bool secure = protocol == "HTTPS";
 
@@ -96,9 +96,9 @@ public:
     //! parse data from request
     //!
     //! \param QString request
-    //! \return true on success, false otherwise, considered bad request
+    //! \return HTTP error code
     //!
-    bool parse(QString request);
+    quint16 parse(QString request);
 
 private:
     //!
@@ -114,83 +114,54 @@ private:
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 };
 
-inline bool Request::parse(QString request)
+inline quint16 Request::parse(QString request)
 {
-    // buffer all data
-    this->data += request;
-
-    // Save client ip address
-    this->ip = this->socket->peerAddress();
-
-    // if no header is present, just append all data to request.body
-    if (!this->data.contains(httpRx))
+    // if http request-line is not present, just append all data to request.body
+    if (!request.contains(httpRx))
     {
-        this->body.append(this->data);
+        this->body.append(request);
         return true;
     }
 
-    QStringList data_list = this->data.split("\r\n");
-    bool is_body = false;
+    this->ip = this->socket->peerAddress();
+    QVector<QStringRef> ref_data = request.splitRef("\r\n");
 
-    for (int i = 0; i < data_list.size(); ++i)
+    for (int i = 0; i < ref_data.size(); ++i)
     {
-        if (is_body)
+        if (!this->body.isEmpty())
         {
-            this->body.append(data_list.at(i));
+            this->body.append(ref_data.at(i));
             this->length += this->body.size();
             continue;
         }
 
-        QStringList entity_item = data_list.at(i).split(":");
-
-        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body)
+        // parse request-line
+        // we use this->method's status as an indicator to determine if the
+        // first header line (request-line) arrived
+        if (this->method.isEmpty())
         {
-            is_body = true;
-            continue;
-        }
-        else if (i == 0 && entity_item.length() < 2)
-        {
-            QStringList first_line = entity_item.at(0).split(" ");
-            this->method = first_line.at(0);
-            this->url = first_line.at(1).trimmed();
-            this->protocol = first_line.at(2).trimmed();
-            continue;
-        }
+            if (ref_data.at(i) == "")
+            {
+                continue;
+            }
+            else
+            {
+                // request-line arrived
+                QVector<QStringRef> request_line = ref_data.at(i).split(" ");
+                this->method = request_line.at(0).toString();
+                this->url = request_line.at(1).toString();
+                this->protocol = request_line.at(2).toString();
 
-        m_header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed().toLower();
+                // if request-line is invalid, return 400
+                // if protocol is invalid, return 505
+
+                continue;
+            }
+        }
+        // when you get a newline, set this->body = ""; so isNull becomes false
     }
 
-    if (m_header.contains("host"))
-        this->hostname = m_header["host"];
-
-    qDebug() << "this->object populated: "
-             << this->method << this->url << m_header << this->protocol << this->body
-             << this->hostname << this->ip
-             << this->length;
-
-    // extract cookies
-    // eg: USER_TOKEN=Yes;test=val
-    if (m_header.contains("cookie"))
-    {
-        for (const QString &cookie : this->get("cookie").split(";"))
-        {
-            int split = cookie.trimmed().indexOf("=");
-            if (split == -1)
-                continue;
-
-            QString key = cookie.left(split).trimmed();
-            if (!key.size())
-                continue;
-
-            QString value = cookie.mid(split + 1).trimmed();
-
-            this->cookies[key.toLower()] = value.toLower();
-        }
-
-        qDebug() << "cookies:\n" << this->cookies << "\n";
-    }
-
-    return true;
+    return 0;
 }
 
 #endif
