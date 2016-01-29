@@ -153,7 +153,8 @@ inline quint16 Request::parse(QString request)
                     continue;
                 }
 
-                if (this->method.length() > ch - 1) {
+                if (this->method.length() > ch - 1)
+                {
                     this->method += ref_data.at(ln).at(ch);
                     continue;
                 }
@@ -170,16 +171,30 @@ inline quint16 Request::parse(QString request)
             }
 
             qDebug() << this->method << this->url << this->protocol;
+
+            // longest supported method name is OPTIONS
+            if (this->method.size() > 7)
+                return 501;
+
+            // TODO: check request-line entries
             // if request-line is invalid, return 400
             // if protocol is invalid, return 505
             continue;
         }
+
         // got an empty line, so all subsequent lines in ref_data are body
         if (ref_data.at(ln).isEmpty())
         {
             this->body = "";
             continue;
         }
+
+        // fill request headers
+        for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
+        {
+        }
+
+        // m_header[
     }
 
     return 0;
