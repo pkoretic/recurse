@@ -144,41 +144,42 @@ inline quint16 Request::parse(QString request)
             {
                 continue;
             }
-            else
-            {
-                // request-line arrived
-                for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
-                {
-                    if (ref_data.at(ln).at(ch).isSpace())
-                    {
-                        continue;
-                    }
 
-                    if (this->method.length() > ch - 1) {
-                        this->method += ref_data.at(ln).at(ch);
-                        continue;
-                    }
-                    else if (this->method.length() + this->url.length() > ch - 2)
-                    {
-                        this->url += ref_data.at(ln).at(ch);
-                        continue;
-                    }
-                    else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
-                    {
-                        this->protocol += ref_data.at(ln).at(ch);
-                        continue;
-                    }
+            // request-line arrived
+            for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
+            {
+                if (ref_data.at(ln).at(ch).isSpace())
+                {
+                    continue;
                 }
 
-                qDebug() << this->method << this->url << this->protocol;
-                // if request-line is invalid, return 400
-                // if protocol is invalid, return 505
-
-                continue;
+                if (this->method.length() > ch - 1) {
+                    this->method += ref_data.at(ln).at(ch);
+                    continue;
+                }
+                else if (this->method.length() + this->url.length() > ch - 2)
+                {
+                    this->url += ref_data.at(ln).at(ch);
+                    continue;
+                }
+                else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
+                {
+                    this->protocol += ref_data.at(ln).at(ch);
+                    continue;
+                }
             }
+
+            qDebug() << this->method << this->url << this->protocol;
+            // if request-line is invalid, return 400
+            // if protocol is invalid, return 505
+            continue;
         }
-        // when you get a newline, set this->body = ""; so isNull becomes false
-        // (line 131)
+        // got an empty line, so all subsequent lines in ref_data are body
+        if (ref_data.at(ln).isEmpty())
+        {
+            this->body = "";
+            continue;
+        }
     }
 
     return 0;
