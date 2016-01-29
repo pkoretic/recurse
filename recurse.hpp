@@ -624,7 +624,14 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
     {
         QString data(ctx->request.socket->readAll());
 
-        ctx->request.parse(data);
+        auto code = ctx->request.parse(data);
+
+        if (code != 0)
+        {
+            ctx->response.status(code).type("text/plain");
+            m_send_response(ctx);
+            return;
+        }
 
         if (ctx->request.length < ctx->request.get("content-length").toLongLong())
             return;
