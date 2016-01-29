@@ -126,11 +126,11 @@ inline quint16 Request::parse(QString request)
     this->ip = this->socket->peerAddress();
     QVector<QStringRef> ref_data = request.splitRef("\r\n");
 
-    for (int i = 0; i < ref_data.size(); ++i)
+    for (int ln = 0; ln < ref_data.size(); ++ln)
     {
-        if (!this->body.isEmpty())
+        if (!this->body.isNull())
         {
-            this->body.append(ref_data.at(i));
+            this->body.append(ref_data.at(ln));
             this->length += this->body.size();
             continue;
         }
@@ -140,18 +140,37 @@ inline quint16 Request::parse(QString request)
         // first header line (request-line) arrived
         if (this->method.isEmpty())
         {
-            if (ref_data.at(i) == "")
+            if (ref_data.at(ln) == "")
             {
                 continue;
             }
             else
             {
                 // request-line arrived
-                QVector<QStringRef> request_line = ref_data.at(i).split(" ");
-                this->method = request_line.at(0).toString();
-                this->url = request_line.at(1).toString();
-                this->protocol = request_line.at(2).toString();
+                for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
+                {
+                    if (ref_data.at(ln).at(ch).isSpace())
+                    {
+                        continue;
+                    }
 
+                    if (this->method.length() > ch - 1) {
+                        this->method += ref_data.at(ln).at(ch);
+                        continue;
+                    }
+                    else if (this->method.length() + this->url.length() > ch - 2)
+                    {
+                        this->url += ref_data.at(ln).at(ch);
+                        continue;
+                    }
+                    else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
+                    {
+                        this->protocol += ref_data.at(ln).at(ch);
+                        continue;
+                    }
+                }
+
+                qDebug() << this->method << this->url << this->protocol;
                 // if request-line is invalid, return 400
                 // if protocol is invalid, return 505
 
@@ -159,6 +178,7 @@ inline quint16 Request::parse(QString request)
             }
         }
         // when you get a newline, set this->body = ""; so isNull becomes false
+        // (line 131)
     }
 
     return 0;
