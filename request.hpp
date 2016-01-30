@@ -113,7 +113,7 @@ private:
     //!
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
-    QList<QString> HttpMethods{
+    const QList<QString> HttpMethods{
         "GET",
         "POST",
         "PUT",
