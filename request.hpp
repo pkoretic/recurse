@@ -112,6 +112,14 @@ private:
     //! match HTTP request line
     //!
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
+
+    QList<QString> HttpMethods{
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+    };
 };
 
 inline quint16 Request::parse(QString request)
@@ -173,7 +181,7 @@ inline quint16 Request::parse(QString request)
             qDebug() << this->method << this->url << this->protocol;
 
             // longest supported method name is OPTIONS
-            if (this->method.size() > 7)
+            if (this->method.size() > 7 || !HttpMethods.contains(this->method))
                 return 501;
 
             // TODO: check request-line entries
