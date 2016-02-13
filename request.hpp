@@ -133,6 +133,15 @@ inline quint16 Request::parse_request_line(const QStringRef &req_line)
     {
         if (req_line.at(ch).isSpace())
         {
+            qDebug() << "whitespace" << this->method.length() << ch;
+
+            if (this->method.length() == ch) {
+                auto code = validate_request_method();
+
+                if (code != 0)
+                    return code;
+            }
+
             continue;
         }
 
