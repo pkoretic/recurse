@@ -122,11 +122,12 @@ private:
         "CONNECT"
     };
 
-    void parse_request_line(const QStringRef &req_line);
-    quint16 validate_request_line();
+    quint16 parse_request_line(const QStringRef &req_line);
+    quint16 parse_url_char(const QChar &ch);
+    quint16 validate_request_method();
 };
 
-inline void Request::parse_request_line(const QStringRef &req_line)
+inline quint16 Request::parse_request_line(const QStringRef &req_line)
 {
     for (int ch = 0; ch < req_line.size(); ++ch)
     {
@@ -135,6 +136,9 @@ inline void Request::parse_request_line(const QStringRef &req_line)
             continue;
         }
 
+        // TODO: check request-line entries
+        // if request-line is invalid, return 400
+        //
         // TODO: validate after each char
         // TODO: benchmark char loop vs validation regex
         if (this->method.length() > ch - 1)
@@ -152,23 +156,27 @@ inline void Request::parse_request_line(const QStringRef &req_line)
             this->protocol += req_line.at(ch);
             continue;
         }
+        // if protocol is invalid, return 505
     }
+
+    qDebug() << this->method << this->url << this->protocol;
+    return 0;
 }
 
-inline quint16 Request::validate_request_line()
+inline quint16 Request::parse_url_char(const QChar &ch)
 {
-    // check method
-    if (this->method.size() > 7 || !HttpMethods.contains(this->method))
-        return 501;
-
-    // TODO: check request-line entries
-    // if request-line is invalid, return 400
     // check uri
     // (origin and absolute forms are used for all except OPTIONS and CONNECT methods)
     // (authority form is only used for a CONNECT method)
     // (asterisk form is only used for an OPTIONS method)
     //
-    // if protocol is invalid, return 505
+    return 0;
+}
+
+inline quint16 Request::validate_request_method()
+{
+    if (this->method.size() > 7 || !HttpMethods.contains(this->method))
+        return 501;
 
     return 0;
 }
@@ -203,8 +211,7 @@ inline quint16 Request::parse(QString request)
                 continue;
             }
 
-            parse_request_line(ref_data.at(ln));
-            auto code = validate_request_line();
+            auto code = parse_request_line(ref_data.at(ln));
 
             if (code != 0)
                 return code;
