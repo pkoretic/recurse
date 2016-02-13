@@ -118,35 +118,38 @@ private:
         "POST",
         "PUT",
         "DELETE",
-        "OPTIONS"
+        "OPTIONS",
+        "CONNECT"
     };
 
-    void parse_request_line(QVector<QStringRef> ref_data, int ln);
+    void parse_request_line(QStringRef req_line);
     quint16 validate_request_line();
 };
 
-inline void Request::parse_request_line(QVector<QStringRef> ref_data, int ln)
+inline void Request::parse_request_line(QStringRef req_line)
 {
-    for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
+    for (int ch = 0; ch < req_line.size(); ++ch)
     {
-        if (ref_data.at(ln).at(ch).isSpace())
+        if (req_line.at(ch).isSpace())
         {
             continue;
         }
 
+        // TODO: validate after each char
+        // TODO: benchmark char loop vs validation regex
         if (this->method.length() > ch - 1)
         {
-            this->method += ref_data.at(ln).at(ch);
+            this->method += req_line.at(ch);
             continue;
         }
         else if (this->method.length() + this->url.length() > ch - 2)
         {
-            this->url += ref_data.at(ln).at(ch);
+            this->url += req_line.at(ch);
             continue;
         }
         else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
         {
-            this->protocol += ref_data.at(ln).at(ch);
+            this->protocol += req_line.at(ch);
             continue;
         }
     }
@@ -154,13 +157,17 @@ inline void Request::parse_request_line(QVector<QStringRef> ref_data, int ln)
 
 inline quint16 Request::validate_request_line()
 {
-    // longest supported method name is OPTIONS
+    // check method
     if (this->method.size() > 7 || !HttpMethods.contains(this->method))
         return 501;
 
     // TODO: check request-line entries
-    // now check URL
     // if request-line is invalid, return 400
+    // check uri
+    // (origin and absolute forms are used for all except OPTIONS and CONNECT methods)
+    // (authority form is only used for a CONNECT method)
+    // (asterisk form is only used for an OPTIONS method)
+    //
     // if protocol is invalid, return 505
 
     return 0;
@@ -196,8 +203,11 @@ inline quint16 Request::parse(QString request)
                 continue;
             }
 
-            parse_request_line(ref_data, ln);
+            parse_request_line(ref_data.at(ln));
             auto code = validate_request_line();
+
+            if (code != 0)
+                return code;
 
             continue;
         }
