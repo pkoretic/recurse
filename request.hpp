@@ -122,11 +122,11 @@ private:
         "CONNECT"
     };
 
-    void parse_request_line(QStringRef req_line);
+    void parse_request_line(const QStringRef &req_line);
     quint16 validate_request_line();
 };
 
-inline void Request::parse_request_line(QStringRef req_line)
+inline void Request::parse_request_line(const QStringRef &req_line)
 {
     for (int ch = 0; ch < req_line.size(); ++ch)
     {
