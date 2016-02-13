@@ -120,7 +120,51 @@ private:
         "DELETE",
         "OPTIONS"
     };
+
+    void parse_request_line(QVector<QStringRef> ref_data, int ln);
+    quint16 validate_request_line();
 };
+
+inline void Request::parse_request_line(QVector<QStringRef> ref_data, int ln)
+{
+    for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
+    {
+        if (ref_data.at(ln).at(ch).isSpace())
+        {
+            continue;
+        }
+
+        if (this->method.length() > ch - 1)
+        {
+            this->method += ref_data.at(ln).at(ch);
+            continue;
+        }
+        else if (this->method.length() + this->url.length() > ch - 2)
+        {
+            this->url += ref_data.at(ln).at(ch);
+            continue;
+        }
+        else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
+        {
+            this->protocol += ref_data.at(ln).at(ch);
+            continue;
+        }
+    }
+}
+
+inline quint16 Request::validate_request_line()
+{
+    // longest supported method name is OPTIONS
+    if (this->method.size() > 7 || !HttpMethods.contains(this->method))
+        return 501;
+
+    // TODO: check request-line entries
+    // now check URL
+    // if request-line is invalid, return 400
+    // if protocol is invalid, return 505
+
+    return 0;
+}
 
 inline quint16 Request::parse(QString request)
 {
@@ -143,7 +187,6 @@ inline quint16 Request::parse(QString request)
             continue;
         }
 
-        // parse request-line
         // we use this->method's status as an indicator to determine if the
         // first header line (request-line) arrived
         if (this->method.isEmpty())
@@ -153,40 +196,9 @@ inline quint16 Request::parse(QString request)
                 continue;
             }
 
-            // request-line arrived
-            for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
-            {
-                if (ref_data.at(ln).at(ch).isSpace())
-                {
-                    continue;
-                }
+            parse_request_line(ref_data, ln);
+            auto code = validate_request_line();
 
-                if (this->method.length() > ch - 1)
-                {
-                    this->method += ref_data.at(ln).at(ch);
-                    continue;
-                }
-                else if (this->method.length() + this->url.length() > ch - 2)
-                {
-                    this->url += ref_data.at(ln).at(ch);
-                    continue;
-                }
-                else if (this->method.length() + this->url.length() + this->protocol.length() > ch - 3)
-                {
-                    this->protocol += ref_data.at(ln).at(ch);
-                    continue;
-                }
-            }
-
-            qDebug() << this->method << this->url << this->protocol;
-
-            // longest supported method name is OPTIONS
-            if (this->method.size() > 7 || !HttpMethods.contains(this->method))
-                return 501;
-
-            // TODO: check request-line entries
-            // if request-line is invalid, return 400
-            // if protocol is invalid, return 505
             continue;
         }
 
@@ -198,13 +210,17 @@ inline quint16 Request::parse(QString request)
         }
 
         // fill request headers
+        qDebug() << "line" << ref_data.at(ln);
+        // m_header[ref_data.at(ln).split(":").at(0).toString().trimmed()] = ref_data.at(ln).split(":").at(1).toString().trimmed();
+
+        /*
         for (int ch = 0; ch < ref_data.at(ln).size(); ++ch)
         {
         }
-
-        // m_header[
+        */
     }
 
+    qDebug() << "headers:" << m_header;
     return 0;
 }
 
