@@ -36,11 +36,7 @@ int main(int argc, char *argv[])
         ctx.response.send("Hello world");
     });
 
-    auto result = app.listen(3000);
-    if (result.error())
-    {
-        qDebug() << "app.listen failed with an error:" << result.lastError();
-    }
+    app.listen(3000);
 };
 
 ```
