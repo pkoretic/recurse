@@ -630,10 +630,10 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
         if (ctx->request.length < ctx->request.get("content-length").toLongLong())
             return;
 
+        ctx->response.end = std::bind(&Recurse::m_start_upstream, this, ctx, middleware_prev);
+
         if (m_middleware_next.count() > 0)
         {
-            ctx->response.end = std::bind(&Recurse::m_start_upstream, this, ctx, middleware_prev);
-
             m_middleware_next[0](
             *ctx,
             std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
@@ -641,6 +641,8 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
         }
         else
         {
+            // write custom 404 mw to replace this, for example see 'examples/404'
+            ctx->response.status(404).send("Not Found");
         }
     });
 
