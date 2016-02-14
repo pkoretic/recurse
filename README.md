@@ -24,19 +24,22 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // logger
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next)
+    {
         qDebug() << ctx.request.ip;
         next();
     });
 
     // hello world
-    app.use([](auto &ctx) {
+    app.use([](auto &ctx)
+    {
         ctx.response.send("Hello world");
     });
 
-    auto ret = app.listen(3000);
-    if (ret.error()) {
-        qDebug() << "app.listen failed with an error:" << ret.lastError();
+    auto result = app.listen(3000);
+    if (result.error())
+    {
+        qDebug() << "app.listen failed with an error:" << result.lastError();
     }
 };
 
