@@ -1,3 +1,6 @@
+#ifndef RECURSE_HPP
+#define RECURSE_HPP
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QHostAddress>
@@ -846,3 +849,5 @@ inline Returns Recurse::listen()
     ret.setErrorCode(0);
     return ret;
 }
+
+#endif
