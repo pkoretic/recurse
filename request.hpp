@@ -3,6 +3,8 @@
 
 #include <QTcpSocket>
 #include <QHash>
+#include <QUrl>
+#include <QUrlQuery>
 
 class Request
 {
@@ -53,7 +55,12 @@ public:
     //! \brief url
     //! HTTP request url, eg: /helloworld
     //!
-    QString url;
+    QUrl url;
+
+    //!
+    //! \brief query
+    //!
+    QUrlQuery query;
 
     //!
     //! \brief length
@@ -153,6 +160,7 @@ inline bool Request::parse(QString request)
             QStringList first_line = entity_item.at(0).split(" ");
             this->method = first_line.at(0);
             this->url = first_line.at(1).trimmed();
+            this->query.setQuery(this->url.query());
             this->protocol = first_line.at(2).trimmed();
             continue;
         }
