@@ -2,7 +2,7 @@
 
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
-Recurse is set to be a modern micro web framework written in latest C++14 using
+Recurse is set to be a modern web micro framework written in latest C++ (14) using
 Qt library leveraging all the best features of both worlds.  We strongly
 emphasize on writing a clean and easy to understand code and avoid using
 templates to encourage contributions.
@@ -11,7 +11,7 @@ Recurse aims to be small with no middlewares bundled in the core. This should
 allow it to be very robust for writing next generation web applications and
 APIs.
 
-
+It is inspired by [node.js] [koa](http://koajs.com) and [Express](http://expressjs.com) micro frameworks.
 
 # Example
 
