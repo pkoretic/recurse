@@ -59,8 +59,16 @@ public:
 
     //!
     //! \brief query
+    //! query strings
     //!
     QUrlQuery query;
+
+    //!
+    //! \brief params
+    //!r
+    //! request parameters that can be filled by router middlewares
+    //! it's easier to provide container here (which doesn't have to be used)
+    QHash<QString, QString> params;
 
     //!
     //! \brief length
