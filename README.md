@@ -11,7 +11,7 @@ Recurse aims to be small with no middlewares bundled in the core. This should
 allow it to be very robust for writing next generation web applications and
 APIs.
 
-It is inspired by [node.js] [koa](http://koajs.com) and [Express](http://expressjs.com) micro frameworks.
+It is inspired by [Node.js](https://nodejs.org/en) [koa](http://koajs.com) and [Express](http://expressjs.com) micro frameworks.
 
 # Example
 
