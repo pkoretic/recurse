@@ -15,7 +15,7 @@ It is inspired by [Node.js](https://nodejs.org/en) [koa](http://koajs.com) and [
 
 # Example
 
-main.cpp
+
 ```
 #include "recurse.hpp"
 
@@ -38,46 +38,45 @@ int main(int argc, char *argv[])
 
     app.listen(3000);
 };
+```
+
+# Middlewares
+
+There is no middleware bundled in the core.
+For example, for routing, one can use [Router](https://github.com/xwalk/recurse-router)
 
 ```
-main.pro
-```
-TARGET = example
+#include "router.hpp"
 
-QT       += core network
-QT       -= gui
+int main(int argc, char *argv[])
+{
+    Recurse app(argc, argv);
 
-CONFIG   += console
-CONFIG   += c++14
-CONFIG   -= app_bundle
+    Module::Router router;
 
-TEMPLATE = app
+    router.GET("/hello/:user", [](auto &ctx, auto /* next */)
+    {
+        ctx.response.send("Hello World " + ctx.request.params["user"]);
+    });
 
-SOURCES += main.cpp
-
-QMAKE_CXXFLAGS += -std=c++14
-
-macx {
-    QMAKE_CXXFLAGS += -stdlib=libc++
+    app.listen();
 }
 ```
 
-build, run and use
+# Styling
+
+This is not required but it is prefered. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
+
 ```
-# build
+clang-format -i source.hpp
 
-qmake main.pro
-# or for faster build: qmake QMAKE_CC=clang QMAKE_CXX=clang++ main.pro
-# or for even faster build: qmake QMAKE_CC="ccache clang" QMAKE_CXX="ccache clang++" main.prop
+# to format all files
+find . -name "*.hpp" -or -name "*.cpp" | xargs clang-format -i
 
-make
-# or make -j[number of cores + 1]
-# or make release (default)
-# or make debug
+```
 
-# run
-./example
+You can also use shortcut command:
+```
+clang-format -i -style="{BasedOnStyle: WebKit, PointerAlignment: Right, Standard: Cpp11, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman, AllowShortFunctionsOnASingleLine: false, ContinuationIndentWidth: 0, MaxEmptyLinesToKeep: 1, NamespaceIndentation: All, AccessModifierOffset: 0}" source.hpp
 
-# use
-curl http://127.0.0.1:3000
-Hello world
+```
