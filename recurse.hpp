@@ -635,18 +635,10 @@ inline bool Recurse::handleConnection(QTcpSocket *socket)
 
         ctx->response.end = std::bind(&Recurse::m_start_upstream, this, ctx, middleware_prev);
 
-        if (m_middleware_next.count() > 0)
-        {
-            m_middleware_next[0](
-            *ctx,
-            std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
-            std::bind(&Recurse::m_send_response, this, ctx));
-        }
-        else
-        {
-            // write custom 404 mw to replace this, for example see 'examples/404'
-            ctx->response.status(404).send("Not Found");
-        }
+        m_middleware_next[0](
+        *ctx,
+        std::bind(&Recurse::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
+        std::bind(&Recurse::m_send_response, this, ctx));
     });
 
     connect(ctx->request.socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev]
@@ -747,6 +739,11 @@ inline void Recurse::https_server(const QHash<QString, QVariant> &options)
 //!
 inline Returns Recurse::listen(quint16 port, QHostAddress address)
 {
+    use([](auto &ctx)
+    {
+        ctx.response.status(404).send("Not Found");
+    });
+
     // if this function is called and m_http_set is true, ignore new values
     if (m_http_set)
         return listen();
@@ -797,6 +794,11 @@ inline Returns Recurse::listen(quint16 port, QHostAddress address)
 //!
 inline Returns Recurse::listen()
 {
+    use([](auto &ctx)
+    {
+        ctx.response.status(404).send("Not Found");
+    });
+
     if (m_http_set)
     {
         auto r = http->compose(m_http_port, m_http_address);
