@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
 # Styling
 
-This is not required but it is prefered. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
+This is not required but it is preferred. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
 
 ```
 clang-format -i source.hpp
