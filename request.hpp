@@ -179,11 +179,6 @@ inline bool Request::parse(QString request)
     if (m_header.contains("host"))
         this->hostname = m_header["host"];
 
-    qDebug() << "this->object populated: "
-             << this->method << this->url << m_header << this->protocol << this->body
-             << this->hostname << this->ip
-             << this->length;
-
     // extract cookies
     // eg: USER_TOKEN=Yes;test=val
     if (m_header.contains("cookie"))
@@ -202,8 +197,6 @@ inline bool Request::parse(QString request)
 
             this->cookies[key.toLower()] = value.toLower();
         }
-
-        qDebug() << "cookies:\n" << this->cookies << "\n";
     }
 
     return true;

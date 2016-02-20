@@ -245,10 +245,6 @@ private:
 // https://tools.ietf.org/html/rfc7230#page-19
 inline QString Response::create_reply()
 {
-    qDebug() << __FUNCTION__ << this->body();
-
-    qDebug() << "response header:" << m_header;
-
     QString reply = this->protocol % " " % QString::number(this->status()) % " "
     % this->http_codes[this->status()] % "\r\n";
 
