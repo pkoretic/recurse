@@ -9,17 +9,17 @@
 
 int main(int argc, char *argv[])
 {
-    Recurse app(argc, argv);
+    Recurse::Application app(argc, argv);
 
     // http options
     QHash<QString, QVariant> http_options;
-    http_options["port"] = 3000;
+    http_options["port"] = 3001;
 
     // https options
     QHash<QString, QVariant> https_options;
     https_options["port"] = 3020;
-    https_options["private_key"] = "./priv.pem";
-    https_options["certificate"] = "./cert.pem";
+    https_options["private_key"] = "../https/priv.pem";
+    https_options["certificate"] = "../https/cert.pem";
 
     app.http_server(http_options);
     app.https_server(https_options);

@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    Recurse app(argc, argv);
+    Recurse::Application app(argc, argv);
 
     app.use([](auto &ctx, auto next)
     {

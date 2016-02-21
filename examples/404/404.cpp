@@ -14,7 +14,7 @@
 
 int main(int argc, char *argv[])
 {
-    Recurse app(argc, argv);
+    Recurse::Application app(argc, argv);
 
     // example other middleware
     // if we send data from here, last 404 middleware won't get called
