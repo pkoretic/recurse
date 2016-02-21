@@ -144,7 +144,7 @@ inline bool Request::parse(QString request)
         return true;
     }
 
-    QStringList data_list = this->data.split("\r\n");
+    auto data_list = this->data.splitRef("\r\n");
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i)
@@ -156,7 +156,7 @@ inline bool Request::parse(QString request)
             continue;
         }
 
-        QStringList entity_item = data_list.at(i).split(":");
+        auto entity_item = data_list.at(i).split(":");
 
         if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body)
         {
@@ -165,15 +165,15 @@ inline bool Request::parse(QString request)
         }
         else if (i == 0 && entity_item.length() < 2)
         {
-            QStringList first_line = entity_item.at(0).split(" ");
-            this->method = first_line.at(0);
-            this->url = first_line.at(1).trimmed();
+            auto first_line = entity_item.at(0).split(" ");
+            this->method = first_line.at(0).toString();
+            this->url = first_line.at(1).toString();
             this->query.setQuery(this->url.query());
-            this->protocol = first_line.at(2).trimmed();
+            this->protocol = first_line.at(2).toString();
             continue;
         }
 
-        m_header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed().toLower();
+        m_header[entity_item.at(0).toString()] = entity_item.at(1).toString();
     }
 
     if (m_header.contains("host"))
@@ -183,19 +183,19 @@ inline bool Request::parse(QString request)
     // eg: USER_TOKEN=Yes;test=val
     if (m_header.contains("cookie"))
     {
-        for (const QString &cookie : this->get("cookie").split(";"))
+        for (const auto &cookie : this->get("cookie").splitRef(";"))
         {
-            int split = cookie.trimmed().indexOf("=");
+            int split = cookie.indexOf("=");
             if (split == -1)
                 continue;
 
-            QString key = cookie.left(split).trimmed();
+            auto key = cookie.left(split);
             if (!key.size())
                 continue;
 
-            QString value = cookie.mid(split + 1).trimmed();
+            auto value = cookie.mid(split + 1);
 
-            this->cookies[key.toLower()] = value.toLower();
+            this->cookies[key.toString().toLower()] = value.toString().toLower();
         }
     }
 
