@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     // Second middleware, sets custom data
     app.use([](auto &ctx, auto next, auto prev)
     {
-        qDebug() << "routed request:" << ctx.request.get("user-agent");
+        qDebug() << "routed request:" << ctx.request.getHeader("user-agent");
 
         QString test("a");
         // custom data to be passed around - qvariant types
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         qDebug() << "last route: " << ctx.get("customdata");
 
         // set custom header
-        res.set("x-foo-data", "tvmid");
+        res.setHeader("x-foo-data", "tvmid");
 
         // these are already default values
         // text/plain will be overriden by send if json is wanted

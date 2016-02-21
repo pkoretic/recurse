@@ -16,9 +16,9 @@ public:
     //! \param QString case-insensitive key of the header
     //! \return QString header
     //!
-    QString get(const QString &key)
+    QString getHeader(const QString &key)
     {
-        return m_header[key.toLower()];
+        return m_headers[key.toLower()];
     }
 
     //!
@@ -29,9 +29,9 @@ public:
     //! \param QString value for the header
     //! \return Response chainable
     //!
-    Response &set(const QString &key, const QString &value)
+    Response &setHeader(const QString &key, const QString &value)
     {
-        m_header[key.toLower()] = value.toLower();
+        m_headers[key] = value;
         return *this;
     }
 
@@ -67,7 +67,7 @@ public:
     //!
     QString type() const
     {
-        return m_header["content-type"];
+        return m_headers["content-type"];
     }
 
     //!
@@ -79,7 +79,7 @@ public:
     //!
     Response &type(const QString &type)
     {
-        m_header["content-type"] = type.toLower();
+        m_headers["content-type"] = type;
         return *this;
     }
 
@@ -234,7 +234,7 @@ private:
     //! holds all header data as key/value
     //!
 
-    QHash<QString, QString> m_header;
+    QHash<QString, QString> m_headers;
     //!
     //! \brief m_body
     //! HTTP response content
@@ -249,14 +249,14 @@ inline QString Response::create_reply()
     % this->http_codes[this->status()] % "\r\n";
 
     // set content length
-    m_header["content-length"] = QString::number(this->body().size());
+    m_headers["content-length"] = QString::number(this->body().size());
 
     // set content type if not set
-    if (!m_header.contains("content-type"))
-        m_header["content-type"] = "text/plain";
+    if (!m_headers.contains("content-type"))
+        m_headers["content-type"] = "text/plain";
 
     // set custom header fields
-    for (auto i = m_header.constBegin(); i != m_header.constEnd(); ++i)
+    for (auto i = m_headers.constBegin(); i != m_headers.constEnd(); ++i)
         reply = reply % i.key() % ": " % i.value() % "\r\n";
 
     reply += "\r\n";

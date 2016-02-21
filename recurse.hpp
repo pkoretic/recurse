@@ -633,7 +633,7 @@ namespace Recurse
 
             ctx->request.parse(data);
 
-            if (ctx->request.length < ctx->request.get("content-length").toLongLong())
+            if (ctx->request.length < ctx->request.getHeader("content-length").toLongLong())
                 return;
 
             ctx->response.end = std::bind(&Application::m_start_upstream, this, ctx, middleware_prev);

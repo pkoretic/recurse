@@ -83,27 +83,53 @@ public:
     QHostAddress ip;
 
     //!
-    //! \brief cookies
-    //! HTTP cookies in key/value form
-    //!
-    QHash<QString, QString> cookies;
-
-    //!
     //! \brief hostname
     //! HTTP hostname from "Host" HTTP header
     //!
     QString hostname;
 
     //!
-    //! \brief get
-    //! Return HTTP request header specified by the key
-    //!
-    //! \param QString case-insensitive key of the header
+    //! \brief getHeader
+    //! return header value, keys are saved in lowercase
+    //! \param key QString
     //! \return QString header value
     //!
-    QString get(const QString &key)
+    QString getHeader(const QString &key)
     {
-        return m_header[key.toLower()];
+        return m_headers[key];
+    }
+
+    //!
+    //! \brief getRawHeader
+    //! return original header name as sent by client
+    //! \param key QString case-sensitive key of the header
+    //! \return QString header value as sent by client
+    //!
+    QHash<QString, QString> getRawHeaders()
+    {
+        return m_headers;
+    }
+
+    //!
+    //! \brief getCookie
+    //! return cookie value with lowercase name
+    //! \param key case-insensitive cookie name
+    //! \return
+    //!
+    QString getCookie(const QString &key)
+    {
+        return m_cookies[key.toLower()];
+    }
+
+    //!
+    //! \brief getRawCookie
+    //! return cookie name as sent by client
+    //! \param key case-sensitive cookie name
+    //! \return
+    //!
+    QString getRawCookie(const QString &key)
+    {
+        return m_cookies[key];
     }
 
     //!
@@ -120,7 +146,14 @@ private:
     //! \brief header
     //! HTTP request headers, eg: header["content-type"] = "text/plain"
     //!
-    QHash<QString, QString> m_header;
+    QHash<QString, QString> m_headers;
+
+
+    //!
+    //! \brief cookies
+    //! HTTP cookies in key/value form
+    //!
+    QHash<QString, QString> m_cookies;
 
     //!
     //! \brief httpRx
@@ -173,17 +206,17 @@ inline bool Request::parse(QString request)
             continue;
         }
 
-        m_header[entity_item.at(0).toString()] = entity_item.at(1).toString();
+        m_headers[entity_item.at(0).toString().toLower()] = entity_item.at(1).toString();
     }
 
-    if (m_header.contains("host"))
-        this->hostname = m_header["host"];
+    if (m_headers.contains("host"))
+        this->hostname = m_headers["host"];
 
     // extract cookies
     // eg: USER_TOKEN=Yes;test=val
-    if (m_header.contains("cookie"))
+    if (m_headers.contains("cookie"))
     {
-        for (const auto &cookie : this->get("cookie").splitRef(";"))
+        for (const auto &cookie : m_headers["cookie"].splitRef(";"))
         {
             int split = cookie.indexOf("=");
             if (split == -1)
@@ -195,7 +228,7 @@ inline bool Request::parse(QString request)
 
             auto value = cookie.mid(split + 1);
 
-            this->cookies[key.toString().toLower()] = value.toString().toLower();
+            m_cookies[key.toString().toLower()] = value.toString();
         }
     }
 
