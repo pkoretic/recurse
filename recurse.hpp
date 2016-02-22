@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QHostAddress>
 #include <QObject>
+#include <QPointer>
 #include <QProcessEnvironment>
 #include <QSslCertificate>
 #include <QSslConfiguration>
@@ -408,9 +409,9 @@ namespace Recurse
         bool handleConnection(QTcpSocket *socket);
 
     private:
-        QCoreApplication *app = NULL;
-        HttpServer *http = NULL;
-        HttpsServer *https = NULL;
+        QPointer<QCoreApplication> app;
+        QPointer<HttpServer> http;
+        QPointer<HttpsServer> https;
         Returns ret;
 
         QVector<DownstreamUpstream> m_middleware_next;
@@ -451,9 +452,14 @@ namespace Recurse
 
     inline Application::~Application()
     {
-        app->deleteLater();
-        http->deleteLater();
-        https->deleteLater();
+        if(app)
+            delete app;
+
+        if(http)
+            delete http;
+
+        if(https)
+            delete https;
     }
 
     //!
