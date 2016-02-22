@@ -63,6 +63,38 @@ int main(int argc, char *argv[])
 }
 ```
 
+# 404 - Not Found
+
+By default, if no middleware responds, **Recurse** will respond with `Not Found`
+message, and `404` HTTP error code.
+
+To make your own response, simply add new middleware at the **end** of the list
+```
+// if any middleware before this responds this won't get called
+app.use([](auto &ctx)
+{
+    ctx.response.status(404).send("Custom Not Found");
+});
+```
+For complete example see [404 example](tree/master/examples/404)
+
+You can also have it as a **first** middleware (if you already have some first
+middleware that does your logging or similar)
+
+```
+app.use([](auto &ctx, auto next, auto prev)
+{
+    next([&ctx, prev]
+    {
+        // this is last code to be called before sending response to client
+        if(ctx.response.status() == 404)
+            ctx.response.body("Custom Not Found");
+
+        prev();
+    });
+});
+```
+
 # Styling
 
 This is not required but it is preferred. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
