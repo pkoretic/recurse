@@ -133,6 +133,17 @@ public:
     }
 
     //!
+    //! \brief getParam
+    //! return params value
+    //! \param key of the param, eg: name
+    //! \return value of the param, eg: johnny
+    //!
+    QString getParam(const QString &key)
+    {
+        return params.value(key);
+    }
+
+    //!
     //! \brief parse
     //! parse data from request
     //!
