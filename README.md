@@ -13,7 +13,7 @@ APIs.
 
 It is inspired by [Node.js](https://nodejs.org/en) [koa](http://koajs.com) and [Express](http://expressjs.com) micro frameworks.
 
-# Example
+## Example
 
 
 ```
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 };
 ```
 
-# Middlewares
+## Middlewares
 
 There is no middleware bundled in the core.
 For example, for routing, one can use [Router](https://github.com/xwalk/recurse-router)
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 }
 ```
 
-# 404 - Not Found
+## 404 - Not Found
 
 By default, if no middleware responds, **Recurse** will respond with `Not Found`
 message, and `404` HTTP error code.
@@ -95,7 +95,7 @@ app.use([](auto &ctx, auto next, auto prev)
 });
 ```
 
-# Styling
+## Styling
 
 This is not required but it is preferred. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
 
