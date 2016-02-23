@@ -452,13 +452,13 @@ namespace Recurse
 
     inline Application::~Application()
     {
-        if(app)
+        if (app)
             delete app;
 
-        if(http)
+        if (http)
             delete http;
 
-        if(https)
+        if (https)
             delete https;
     }
 
