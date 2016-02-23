@@ -97,7 +97,10 @@ app.use([](auto &ctx, auto next, auto prev)
 
 ## Styling
 
-This is not required but it is preferred. When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format)
+When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format).  
+There is a nice [vim-clang-format](https://github.com/rhysd/vim-clang-format) plugin that you can use in vim.
+
+You can also call it manually
 
 ```
 clang-format -i source.hpp
@@ -107,7 +110,7 @@ find . -name "*.hpp" -or -name "*.cpp" | xargs clang-format -i
 
 ```
 
-You can also use shortcut command:
+And you can also use shortcut command
 ```
 clang-format -i -style="{BasedOnStyle: WebKit, PointerAlignment: Right, Standard: Cpp11, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman, AllowShortFunctionsOnASingleLine: false, ContinuationIndentWidth: 0, MaxEmptyLinesToKeep: 1, NamespaceIndentation: All, AccessModifierOffset: 0}" source.hpp
 
