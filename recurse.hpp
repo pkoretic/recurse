@@ -100,7 +100,7 @@ namespace Recurse
         //!
         virtual void incomingConnection(qintptr socket_descriptor)
         {
-            QSslSocket *socket = new QSslSocket();
+            auto socket = new QSslSocket();
 
             socket->setSslConfiguration(m_ssl_configuration);
             socket->setSocketDescriptor(socket_descriptor);
