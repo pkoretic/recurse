@@ -521,15 +521,12 @@ namespace Recurse
     {
         debug("calling next: " + QString::number(current_middleware) + " num: " + QString::number(m_middleware_next.size()));
 
-        if (++current_middleware >= m_middleware_next.size())
-            return;
-
         // save previous middleware function
         if (prev)
             middleware_prev->push_back(prev);
 
         // call next function with current prev
-        m_middleware_next[current_middleware](*ctx, std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
+        m_middleware_next[++current_middleware](*ctx, std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
     }
 
     //!
@@ -633,9 +630,9 @@ namespace Recurse
         auto ctx = new Context;
         ctx->request.socket = socket;
 
-        connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev]
+        connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev, socket]
         {
-            QString data(ctx->request.socket->readAll());
+            QString data(socket->readAll());
 
             ctx->request.parse(data);
 
@@ -650,9 +647,9 @@ namespace Recurse
             std::bind(&Application::m_send_response, this, ctx));
         });
 
-        connect(ctx->request.socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev]
+        connect(socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev, socket]
         {
-            ctx->request.socket->deleteLater();
+            socket->deleteLater();
             delete ctx;
             delete middleware_prev;
         });
