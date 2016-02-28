@@ -399,10 +399,6 @@ namespace Recurse
 
         void use(Downstream next);
         void use(DownstreamUpstream next);
-
-        void use(QVector<Downstream> nexts);
-        void use(QVector<DownstreamUpstream> nexts);
-
         void use(Final next);
 
     public slots:
@@ -560,41 +556,6 @@ namespace Recurse
                 });
             });
         });
-    }
-
-    //!
-    //! \brief Application::use
-    //! overloaded function,
-    //! add multiple middlewares
-    //! very useful for third party modules
-    //!
-    //! \param f vector of middlewares
-    //!
-    inline void Application::use(QVector<DownstreamUpstream> f)
-    {
-        for (const auto &g : f)
-            m_middleware_next.push_back(g);
-    }
-
-    //!
-    //! \brief Application::use
-    //! overloaded function,
-    //! add multiple middlewares, no upstream
-    //! \param f
-    //!
-    inline void Application::use(QVector<Downstream> f)
-    {
-        for (const auto &g : f)
-            m_middleware_next.push_back([g](Context &ctx, NextPrev next, Prev prev)
-            {
-                g(ctx, [next, prev]()
-                {
-                    next([prev]()
-                    {
-                        prev();
-                    });
-                });
-            });
     }
 
     //!
