@@ -5,11 +5,14 @@
 #include <QHash>
 #include <QUrl>
 #include <QUrlQuery>
+#include "lib/external/http-parser/http_parser.h"
 
 class Request
 {
 
 public:
+    Request();
+
     //!
     //! \brief data
     //! client request buffer data
@@ -65,7 +68,7 @@ public:
 
     //!
     //! \brief params
-    //!r
+    //!
     //! request parameters that can be filled by router middlewares
     //! it's easier to provide container here (which doesn't have to be used)
     QHash<QString, QString> params;
@@ -150,7 +153,7 @@ public:
     //! \param QString request
     //! \return true on success, false otherwise, considered bad request
     //!
-    bool parse(QString request);
+    bool parse(const char *data);
 
 private:
     //!
@@ -158,7 +161,6 @@ private:
     //! HTTP request headers, eg: header["content-type"] = "text/plain"
     //!
     QHash<QString, QString> m_headers;
-
 
     //!
     //! \brief cookies
@@ -171,16 +173,49 @@ private:
     //! match HTTP request line
     //!
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
+
+    http_parser m_parser;
+    http_parser_settings m_parser_settings;
+
+    static int on_url_cb(http_parser *parser, const char *buf, size_t len);
+    static int on_header_cb(http_parser *parser, const char *buf, size_t len);
 };
 
-inline bool Request::parse(QString request)
+inline Request::Request()
 {
-    // buffer all data
-    this->data += request;
+    // initialize http-parser
+    http_parser_init(&m_parser, HTTP_REQUEST);
 
+    m_parser_settings.on_url = Request::on_url_cb;
+    m_parser_settings.on_header_field = Request::on_header_cb;
+}
+
+inline int Request::on_url_cb(http_parser *parser, const char *buf,
+size_t len)
+{
+    // this->url
+    qDebug() << "url test" << QString::fromUtf8(buf, len);
+    return 0;
+}
+
+inline int Request::on_header_cb(http_parser *parser, const char *buf,
+size_t len)
+{
+    // this->url
+    qDebug() << "header test" << QString::fromUtf8(buf, len);
+    return 0;
+}
+
+inline bool Request::parse(const char *data)
+{
     // Save client ip address
     this->ip = this->socket->peerAddress();
 
+    qDebug() << "start exec";
+    auto tester = http_parser_execute(&m_parser, &m_parser_settings, data, qstrlen(data));
+    qDebug() << "end exec";
+
+    /*
     // if no header is present, just append all data to request.body
     if (!this->data.contains(httpRx))
     {
@@ -242,6 +277,7 @@ inline bool Request::parse(QString request)
             m_cookies[key.toString().toLower()] = value.toString();
         }
     }
+    */
 
     return true;
 }
