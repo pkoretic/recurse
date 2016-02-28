@@ -517,12 +517,14 @@ namespace Recurse
     {
         debug("calling next: " + QString::number(current_middleware) + " num: " + QString::number(m_middleware_next.size()));
 
+        ++current_middleware;
+
         // save previous middleware function
         if (prev)
             middleware_prev->push_back(prev);
 
         // call next function with current prev
-        m_middleware_next[++current_middleware](*ctx, std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
+        m_middleware_next[current_middleware](*ctx, std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
     }
 
     //!
