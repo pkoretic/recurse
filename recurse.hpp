@@ -100,7 +100,7 @@ namespace Recurse
         //!
         virtual void incomingConnection(qintptr socket_descriptor)
         {
-            auto socket = new QSslSocket();
+            auto *socket = new QSslSocket();
 
             socket->setSslConfiguration(m_ssl_configuration);
             socket->setSocketDescriptor(socket_descriptor);
@@ -594,10 +594,11 @@ namespace Recurse
 
         connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev, socket]
         {
-            QString data(socket->readAll());
+            qDebug() << "start readyRead";
+            // QString data(ctx->request.socket->readAll());
+            ctx->request.parse(ctx->request.socket->readAll().constData());
 
-            ctx->request.parse(data);
-
+            /*
             if (ctx->request.length < ctx->request.getHeader("content-length").toLongLong())
                 return;
 
@@ -607,6 +608,9 @@ namespace Recurse
             *ctx,
             std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
             std::bind(&Application::m_send_response, this, ctx));
+            */
+
+            qDebug() << "end readyRead";
         });
 
         connect(socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev, socket]
