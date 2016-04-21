@@ -148,6 +148,55 @@ public:
         end();
     }
 
+    //! brief redirect
+    //! Perform a 302 redirect to `url`.
+    //!
+    //! the string "back" is used to provide Referrer support
+    //! when Referrer is not present `alt` is used
+    //!
+    //! Examples:
+    //!
+    //!    redirect('back');
+    //!    redirect('back', '/index.html');
+    //!    redirect('/login');
+    //!    redirect('http://google.com');
+    //!
+    //! To override status or body set them before calling redirect
+    //!
+    //!     status(301).body("Redirecting...").redirect("http://www.google.com")
+    //!
+    //! \param url to redirect to
+    //! \param alt used when referrer is not present, "/" by default
+
+    void redirect(const QString &url, const QString &alt = "/")
+    {
+        // set location
+        if (url == "back")
+        {
+            const QString &referrer = getHeader("referrer");
+
+            if (!referrer.isEmpty())
+                setHeader("Location", referrer);
+            else
+                setHeader("Location", alt);
+        }
+        else
+        {
+            setHeader("Location", url);
+        }
+
+        // set redirect status if not set
+        // https://tools.ietf.org/html/rfc7231#section-6.4
+        if (status() < 300 || status() > 308)
+            status(302);
+
+        // set body if not set
+        if (body().isEmpty())
+            body("This page has moved to " % url);
+
+        end();
+    }
+
     //!
     //! \brief end
     //! final function responsible for sending data
