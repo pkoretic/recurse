@@ -148,7 +148,7 @@ public:
         end();
     }
 
-    //! brief redirect
+    //! \brief redirect
     //! Perform a 302 redirect to `url`.
     //!
     //! the string "back" is used to provide Referrer support
