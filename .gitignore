@@ -35,3 +35,5 @@ Makefile*
 *.o
 *.pro.user
 recurse_404
+
+lib/external/http-parser/
