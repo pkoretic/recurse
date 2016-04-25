@@ -83,7 +83,6 @@ int main(int argc, char *argv[])
             QThread::sleep(1);
 
             // return our demo result
-
             return QJsonDocument::fromJson("{\"hello\" : \"world\"}");
         });
 
