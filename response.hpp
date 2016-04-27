@@ -16,9 +16,9 @@ public:
     //! \param QString case-insensitive key of the header
     //! \return QString header
     //!
-    QString get(const QString &key)
+    QString getHeader(const QString &key)
     {
-        return m_header[key.toLower()];
+        return m_headers[key.toLower()];
     }
 
     //!
@@ -29,9 +29,9 @@ public:
     //! \param QString value for the header
     //! \return Response chainable
     //!
-    Response &set(const QString &key, const QString &value)
+    Response &setHeader(const QString &key, const QString &value)
     {
-        m_header[key.toLower()] = value.toLower();
+        m_headers[key] = value;
         return *this;
     }
 
@@ -67,7 +67,7 @@ public:
     //!
     QString type() const
     {
-        return m_header["content-type"];
+        return m_headers["content-type"];
     }
 
     //!
@@ -79,7 +79,7 @@ public:
     //!
     Response &type(const QString &type)
     {
-        m_header["content-type"] = type.toLower();
+        m_headers["content-type"] = type;
         return *this;
     }
 
@@ -144,6 +144,55 @@ public:
     {
         type("application/json");
         m_body = body.toJson(QJsonDocument::Compact);
+
+        end();
+    }
+
+    //! \brief redirect
+    //! Perform a 302 redirect to `url`.
+    //!
+    //! the string "back" is used to provide Referrer support
+    //! when Referrer is not present `alt` is used
+    //!
+    //! Examples:
+    //!
+    //!    redirect('back');
+    //!    redirect('back', '/index.html');
+    //!    redirect('/login');
+    //!    redirect('http://google.com');
+    //!
+    //! To override status or body set them before calling redirect
+    //!
+    //!     status(301).body("Redirecting...").redirect("http://www.google.com")
+    //!
+    //! \param url to redirect to
+    //! \param alt used when referrer is not present, "/" by default
+
+    void redirect(const QString &url, const QString &alt = "/")
+    {
+        // set location
+        if (url == "back")
+        {
+            const QString &referrer = getHeader("referrer");
+
+            if (!referrer.isEmpty())
+                setHeader("Location", referrer);
+            else
+                setHeader("Location", alt);
+        }
+        else
+        {
+            setHeader("Location", url);
+        }
+
+        // set redirect status if not set
+        // https://tools.ietf.org/html/rfc7231#section-6.4
+        if (status() < 300 || status() > 308)
+            status(302);
+
+        // set body if not set
+        if (body().isEmpty())
+            body("This page has moved to " % url);
 
         end();
     }
@@ -234,7 +283,7 @@ private:
     //! holds all header data as key/value
     //!
 
-    QHash<QString, QString> m_header;
+    QHash<QString, QString> m_headers;
     //!
     //! \brief m_body
     //! HTTP response content
@@ -245,22 +294,18 @@ private:
 // https://tools.ietf.org/html/rfc7230#page-19
 inline QString Response::create_reply()
 {
-    qDebug() << __FUNCTION__ << this->body();
-
-    qDebug() << "response header:" << m_header;
-
     QString reply = this->protocol % " " % QString::number(this->status()) % " "
     % this->http_codes[this->status()] % "\r\n";
 
     // set content length
-    m_header["content-length"] = QString::number(this->body().size());
+    m_headers["content-length"] = QString::number(this->body().size());
 
     // set content type if not set
-    if (!m_header.contains("content-type"))
-        m_header["content-type"] = "text/plain";
+    if (!m_headers.contains("content-type"))
+        m_headers["content-type"] = "text/plain";
 
     // set custom header fields
-    for (auto i = m_header.constBegin(); i != m_header.constEnd(); ++i)
+    for (auto i = m_headers.constBegin(); i != m_headers.constEnd(); ++i)
         reply = reply % i.key() % ": " % i.value() % "\r\n";
 
     reply += "\r\n";

@@ -3,11 +3,16 @@
 
 #include <QTcpSocket>
 #include <QHash>
+#include <QUrl>
+#include <QUrlQuery>
+#include "lib/external/http-parser/http_parser.h"
 
 class Request
 {
 
 public:
+    Request();
+
     //!
     //! \brief data
     //! client request buffer data
@@ -53,7 +58,20 @@ public:
     //! \brief url
     //! HTTP request url, eg: /helloworld
     //!
-    QString url;
+    QUrl url;
+
+    //!
+    //! \brief query
+    //! query strings
+    //!
+    QUrlQuery query;
+
+    //!
+    //! \brief params
+    //!
+    //! request parameters that can be filled by router middlewares
+    //! it's easier to provide container here (which doesn't have to be used)
+    QHash<QString, QString> params;
 
     //!
     //! \brief length
@@ -68,27 +86,64 @@ public:
     QHostAddress ip;
 
     //!
-    //! \brief cookies
-    //! HTTP cookies in key/value form
-    //!
-    QHash<QString, QString> cookies;
-
-    //!
     //! \brief hostname
     //! HTTP hostname from "Host" HTTP header
     //!
     QString hostname;
 
     //!
-    //! \brief get
-    //! Return HTTP request header specified by the key
-    //!
-    //! \param QString case-insensitive key of the header
+    //! \brief getHeader
+    //! return header value, keys are saved in lowercase
+    //! \param key QString
     //! \return QString header value
     //!
-    QString get(const QString &key)
+    QString getHeader(const QString &key)
     {
-        return m_header[key.toLower()];
+        return m_headers[key];
+    }
+
+    //!
+    //! \brief getRawHeader
+    //! return original header name as sent by client
+    //! \param key QString case-sensitive key of the header
+    //! \return QString header value as sent by client
+    //!
+    QHash<QString, QString> getRawHeaders()
+    {
+        return m_headers;
+    }
+
+    //!
+    //! \brief getCookie
+    //! return cookie value with lowercase name
+    //! \param key case-insensitive cookie name
+    //! \return
+    //!
+    QString getCookie(const QString &key)
+    {
+        return m_cookies[key.toLower()];
+    }
+
+    //!
+    //! \brief getRawCookie
+    //! return cookie name as sent by client
+    //! \param key case-sensitive cookie name
+    //! \return
+    //!
+    QString getRawCookie(const QString &key)
+    {
+        return m_cookies[key];
+    }
+
+    //!
+    //! \brief getParam
+    //! return params value
+    //! \param key of the param, eg: name
+    //! \return value of the param, eg: johnny
+    //!
+    QString getParam(const QString &key)
+    {
+        return params.value(key);
     }
 
     //!
@@ -98,30 +153,69 @@ public:
     //! \param QString request
     //! \return true on success, false otherwise, considered bad request
     //!
-    bool parse(QString request);
+    bool parse(const char *data);
 
 private:
     //!
     //! \brief header
     //! HTTP request headers, eg: header["content-type"] = "text/plain"
     //!
-    QHash<QString, QString> m_header;
+    QHash<QString, QString> m_headers;
+
+    //!
+    //! \brief cookies
+    //! HTTP cookies in key/value form
+    //!
+    QHash<QString, QString> m_cookies;
 
     //!
     //! \brief httpRx
     //! match HTTP request line
     //!
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
+
+    http_parser m_parser;
+    http_parser_settings m_parser_settings;
+
+    static int on_url_cb(http_parser *parser, const char *buf, size_t len);
+    static int on_header_cb(http_parser *parser, const char *buf, size_t len);
 };
 
-inline bool Request::parse(QString request)
+inline Request::Request()
 {
-    // buffer all data
-    this->data += request;
+    // initialize http-parser
+    http_parser_init(&m_parser, HTTP_REQUEST);
 
+    m_parser_settings.on_url = Request::on_url_cb;
+    m_parser_settings.on_header_field = Request::on_header_cb;
+}
+
+inline int Request::on_url_cb(http_parser *parser, const char *buf,
+size_t len)
+{
+    // this->url
+    qDebug() << "url test" << QString::fromUtf8(buf, len);
+    return 0;
+}
+
+inline int Request::on_header_cb(http_parser *parser, const char *buf,
+size_t len)
+{
+    // this->url
+    qDebug() << "header test" << QString::fromUtf8(buf, len);
+    return 0;
+}
+
+inline bool Request::parse(const char *data)
+{
     // Save client ip address
     this->ip = this->socket->peerAddress();
 
+    qDebug() << "start exec";
+    auto tester = http_parser_execute(&m_parser, &m_parser_settings, data, qstrlen(data));
+    qDebug() << "end exec";
+
+    /*
     // if no header is present, just append all data to request.body
     if (!this->data.contains(httpRx))
     {
@@ -129,7 +223,7 @@ inline bool Request::parse(QString request)
         return true;
     }
 
-    QStringList data_list = this->data.split("\r\n");
+    auto data_list = this->data.splitRef("\r\n");
     bool is_body = false;
 
     for (int i = 0; i < data_list.size(); ++i)
@@ -141,7 +235,7 @@ inline bool Request::parse(QString request)
             continue;
         }
 
-        QStringList entity_item = data_list.at(i).split(":");
+        auto entity_item = data_list.at(i).split(":");
 
         if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body)
         {
@@ -150,45 +244,40 @@ inline bool Request::parse(QString request)
         }
         else if (i == 0 && entity_item.length() < 2)
         {
-            QStringList first_line = entity_item.at(0).split(" ");
-            this->method = first_line.at(0);
-            this->url = first_line.at(1).trimmed();
-            this->protocol = first_line.at(2).trimmed();
+            auto first_line = entity_item.at(0).split(" ");
+            this->method = first_line.at(0).toString();
+            this->url = first_line.at(1).toString();
+            this->query.setQuery(this->url.query());
+            this->protocol = first_line.at(2).toString();
             continue;
         }
 
-        m_header[entity_item.at(0).toLower()] = entity_item.at(1).trimmed().toLower();
+        m_headers[entity_item.at(0).toString().toLower()] = entity_item.at(1).toString();
     }
 
-    if (m_header.contains("host"))
-        this->hostname = m_header["host"];
-
-    qDebug() << "this->object populated: "
-             << this->method << this->url << m_header << this->protocol << this->body
-             << this->hostname << this->ip
-             << this->length;
+    if (m_headers.contains("host"))
+        this->hostname = m_headers["host"];
 
     // extract cookies
     // eg: USER_TOKEN=Yes;test=val
-    if (m_header.contains("cookie"))
+    if (m_headers.contains("cookie"))
     {
-        for (const QString &cookie : this->get("cookie").split(";"))
+        for (const auto &cookie : m_headers["cookie"].splitRef(";"))
         {
-            int split = cookie.trimmed().indexOf("=");
+            int split = cookie.indexOf("=");
             if (split == -1)
                 continue;
 
-            QString key = cookie.left(split).trimmed();
+            auto key = cookie.left(split);
             if (!key.size())
                 continue;
 
-            QString value = cookie.mid(split + 1).trimmed();
+            auto value = cookie.mid(split + 1);
 
-            this->cookies[key.toLower()] = value.toLower();
+            m_cookies[key.toString().toLower()] = value.toString();
         }
-
-        qDebug() << "cookies:\n" << this->cookies << "\n";
     }
+    */
 
     return true;
 }

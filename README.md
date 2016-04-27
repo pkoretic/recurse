@@ -1,8 +1,8 @@
 # [<img title="recurse-logo" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/xwalk/recurse.git)
 
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
-Recurse is set to be a modern micro web framework written in latest C++14 using
+Recurse is set to be a modern web micro framework written in latest C++ (14) using
 Qt library leveraging all the best features of both worlds.  We strongly
 emphasize on writing a clean and easy to understand code and avoid using
 templates to encourage contributions.
@@ -11,11 +11,11 @@ Recurse aims to be small with no middlewares bundled in the core. This should
 allow it to be very robust for writing next generation web applications and
 APIs.
 
+It is inspired by [Node.js](https://nodejs.org/en) [koa](http://koajs.com) and [Express](http://expressjs.com) micro frameworks.
+
+## Example
 
 
-# Example
-
-main.cpp
 ```
 #include "recurse.hpp"
 
@@ -24,61 +24,94 @@ int main(int argc, char *argv[])
     Recurse app(argc, argv);
 
     // logger
-    app.use([](auto &ctx, auto next) {
+    app.use([](auto &ctx, auto next)
+    {
         qDebug() << ctx.request.ip;
         next();
     });
 
     // hello world
-    app.use([](auto &ctx) {
+    app.use([](auto &ctx)
+    {
         ctx.response.send("Hello world");
     });
 
-    auto ret = app.listen(3000);
-    if (ret.error()) {
-        qDebug() << "app.listen failed with an error:" << ret.lastError();
-    }
+    app.listen(3000);
 };
+```
+
+## Middlewares
+
+There is no middleware bundled in the core.
+For example, for routing, one can use [Router](https://github.com/xwalk/recurse-router)
 
 ```
-main.pro
-```
-TARGET = example
+#include "router.hpp"
 
-QT       += core network
-QT       -= gui
+int main(int argc, char *argv[])
+{
+    Recurse app(argc, argv);
 
-CONFIG   += console
-CONFIG   += c++14
-CONFIG   -= app_bundle
+    Module::Router router;
 
-TEMPLATE = app
+    router.GET("/hello/:user", [](auto &ctx, auto /* next */)
+    {
+        ctx.response.send("Hello World " + ctx.request.params["user"]);
+    });
 
-SOURCES += main.cpp
-
-QMAKE_CXXFLAGS += -std=c++14
-
-macx {
-    QMAKE_CXXFLAGS += -stdlib=libc++
+    app.listen();
 }
 ```
 
-build, run and use
+## 404 - Not Found
+
+By default, if no middleware responds, **Recurse** will respond with `Not Found`
+message, and `404` HTTP error code.
+
+To make your own response, simply add new middleware at the **end** of the list
 ```
-# build
+// if any middleware before this responds this won't get called
+app.use([](auto &ctx)
+{
+    ctx.response.status(404).send("Custom Not Found");
+});
+```
+For complete example see [404 example](tree/master/examples/404)
 
-qmake main.pro
-# or for faster build: qmake QMAKE_CC=clang QMAKE_CXX=clang++ main.pro
-# or for even faster build: qmake QMAKE_CC="ccache clang" QMAKE_CXX="ccache clang++" main.prop
+You can also have it as a **first** middleware (if you already have some first
+middleware that does your logging or similar)
 
-make
-# or make -j[number of cores + 1]
-# or make release (default)
-# or make debug
+```
+app.use([](auto &ctx, auto next, auto prev)
+{
+    next([&ctx, prev]
+    {
+        // this is last code to be called before sending response to client
+        if(ctx.response.status() == 404)
+            ctx.response.body("Custom Not Found");
 
-# run
-./example
+        prev();
+    });
+});
+```
 
-# use
-curl http://127.0.0.1:3000
-Hello world
+## Styling
+
+When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format).
+There is a nice [vim-clang-format](https://github.com/rhysd/vim-clang-format) plugin that you can use in vim.
+
+You can also call it manually
+
+```
+clang-format -i source.hpp
+
+# to format all files
+find . -name "*.hpp" -or -name "*.cpp" | xargs clang-format -i
+
+```
+
+And you can also use shortcut command
+```
+clang-format -i -style="{BasedOnStyle: WebKit, PointerAlignment: Right, Standard: Cpp11, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman, AllowShortFunctionsOnASingleLine: false, ContinuationIndentWidth: 0, MaxEmptyLinesToKeep: 1, NamespaceIndentation: All, AccessModifierOffset: 0}" source.hpp
+
+```

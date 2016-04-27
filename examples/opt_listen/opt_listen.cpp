@@ -11,7 +11,7 @@
 int main(int argc, char *argv[])
 {
     QCoreApplication core(argc, argv);
-    Recurse app(&core);
+    Recurse::Application app(&core);
 
     // http options
     QHash<QString, QVariant> http_options;
