@@ -175,35 +175,52 @@ private:
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
     http_parser m_parser;
-    http_parser_settings m_parser_settings;
+    http_parser_settings m_parser_settings{
+	nullptr,
+	on_url,
+	nullptr,
+	on_header_field,
+	nullptr,
+	nullptr,
+	on_body,
+	on_message_complete,
+	nullptr,
+	nullptr
+    };
 
-    static int on_url_cb(http_parser *parser, const char *buf, size_t len);
-    static int on_header_cb(http_parser *parser, const char *buf, size_t len);
+    static int on_url(http_parser *parser, const char *buf, size_t len)
+    {
+        qDebug() << "url test" << QString::fromUtf8(buf, len);
+        return 0;
+    }
+
+    static int on_header_field(http_parser *parser, const char *buf, size_t len)
+    {
+        qDebug() << "header test" << QString::fromUtf8(buf, len);
+        return 0;
+    }
+
+    static int on_body(http_parser *parser, const char *buf, size_t length)
+    {
+        qDebug() << "body:" << QString::fromUtf8(buf, length);
+        return 0;
+    };
+
+    static int on_message_complete(http_parser *parser)
+    {
+        auto self = static_cast<Request *>(parser->data);
+        qDebug() << "message complete for url" << self->url;
+        return 0;
+    }
 };
 
 inline Request::Request()
 {
     // initialize http-parser
     http_parser_init(&m_parser, HTTP_REQUEST);
+    m_parser.data = this;
 
-    m_parser_settings.on_url = Request::on_url_cb;
-    m_parser_settings.on_header_field = Request::on_header_cb;
-}
-
-inline int Request::on_url_cb(http_parser *parser, const char *buf,
-size_t len)
-{
-    // this->url
-    qDebug() << "url test" << QString::fromUtf8(buf, len);
-    return 0;
-}
-
-inline int Request::on_header_cb(http_parser *parser, const char *buf,
-size_t len)
-{
-    // this->url
-    qDebug() << "header test" << QString::fromUtf8(buf, len);
-    return 0;
+    qDebug() << "parser initialized";
 }
 
 inline bool Request::parse(const char *data)
@@ -211,9 +228,9 @@ inline bool Request::parse(const char *data)
     // Save client ip address
     this->ip = this->socket->peerAddress();
 
-    qDebug() << "start exec";
-    auto tester = http_parser_execute(&m_parser, &m_parser_settings, data, qstrlen(data));
-    qDebug() << "end exec";
+    qDebug() << "start exec\n";
+    auto nparsed = http_parser_execute(&m_parser, &m_parser_settings, data, qstrlen(data));
+    qDebug() << "end exec" << nparsed;
 
     /*
     // if no header is present, just append all data to request.body
