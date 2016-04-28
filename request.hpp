@@ -5,7 +5,7 @@
 #include <QHash>
 #include <QUrl>
 #include <QUrlQuery>
-#include "lib/external/http-parser/http_parser.h"
+#include "lib/http_parser_merged.h"
 
 class Request
 {
