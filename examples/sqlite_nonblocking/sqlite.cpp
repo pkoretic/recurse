@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
 
     if (!db.open())
     {
-        qDebug() << "opening sqlite database failed" << db.lastError();
+        qDebug() << db.lastError();
         return 1;
     }
 
