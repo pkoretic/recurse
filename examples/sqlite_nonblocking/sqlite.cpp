@@ -1,6 +1,8 @@
 /*
 *
 * sqlite example using QtConcurrent to prevent bloking event loop by using thread pool
+* default sqlite mode is 'serialized' which supports usage by multiple threads
+* with no restriction https://www.sqlite.org/threadsafe.html
 */
 
 #include "../../recurse.hpp"
