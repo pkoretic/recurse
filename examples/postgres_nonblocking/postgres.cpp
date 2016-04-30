@@ -14,13 +14,13 @@ int main(int argc, char *argv[])
     QMutex mutex;
     QSqlDatabase db = QSqlDatabase::addDatabase("QPSQL");
     db.setHostName("127.0.0.1");
-    db.setDatabaseName("postgres");
-    db.setUserName("postgres");
+    db.setDatabaseName("postgsres");
+    db.setUserName("postgress");
     db.setPassword("");
 
     if (!db.open())
     {
-        qDebug() << "unable to connect to postgres database";
+        qDebug() << db.lastError();
         return 1;
     }
 
