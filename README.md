@@ -112,6 +112,6 @@ find . -name "*.hpp" -or -name "*.cpp" | xargs clang-format -i
 
 And you can also use shortcut command
 ```
-clang-format -i -style="{BasedOnStyle: WebKit, PointerAlignment: Right, Standard: Cpp11, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman, AllowShortFunctionsOnASingleLine: False, ContinuationIndentWidth: 0, MaxEmptyLinesToKeep: 1, NamespaceIndentation: All, AccessModifierOffset: 0}" source.hpp
+clang-format -i -style="{BasedOnStyle: WebKit, PointerAlignment: Right, Standard: Cpp11, TabWidth: 4, UseTab: Never, BreakBeforeBraces: Allman, AllowShortFunctionsOnASingleLine: false, ContinuationIndentWidth: 0, MaxEmptyLinesToKeep: 1, NamespaceIndentation: All, AccessModifierOffset: 0}" source.hpp
 
 ```
