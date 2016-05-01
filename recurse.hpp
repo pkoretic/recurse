@@ -586,10 +586,10 @@ namespace Recurse
     {
         debug("handling new connection");
 
-        auto middleware_prev = new QVector<Prev>;
+        auto middleware_prev = QSharedPointer<QVector<Prev>>(new QVector<Prev>);
         middleware_prev->reserve(m_middleware_next.count());
 
-        auto ctx = new Context;
+        auto ctx = QSharedPointer<Context>(new Context);
         ctx->request.socket = socket;
 
         connect(socket, &QTcpSocket::readyRead, [this, ctx, middleware_prev, socket]
@@ -601,20 +601,15 @@ namespace Recurse
             if (ctx->request.length < ctx->request.getHeader("content-length").toLongLong())
                 return;
 
-            ctx->response.end = std::bind(&Application::m_start_upstream, this, ctx, middleware_prev);
+            ctx->response.end = std::bind(&Application::m_start_upstream, this, ctx.data(), middleware_prev.data());
 
             m_middleware_next[0](
             *ctx,
-            std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, 0, middleware_prev),
-            std::bind(&Application::m_send_response, this, ctx));
+            std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx.data(), 0, middleware_prev.data()),
+            std::bind(&Application::m_send_response, this, ctx.data()));
         });
 
-        connect(socket, &QTcpSocket::disconnected, [this, ctx, middleware_prev, socket]
-        {
-            socket->deleteLater();
-            delete ctx;
-            delete middleware_prev;
-        });
+        connect(socket, &QAbstractSocket::disconnected, socket, &QObject::deleteLater);
 
         return true;
     }
