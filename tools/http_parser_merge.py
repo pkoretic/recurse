@@ -10,9 +10,7 @@
 #
 
 import argparse
-import fileinput
 import os
-import re
 import shutil
 from distutils.spawn import find_executable
 from pyclibrary import CParser
