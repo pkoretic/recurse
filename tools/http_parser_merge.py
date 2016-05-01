@@ -44,7 +44,9 @@ stock_c_filename = 'http_parser.c'
 stock_h_filename = 'http_parser.h'
 temp_c_filename = '_http_parser.c'
 temp_c_path = args.dest_dir + '/' + temp_c_filename
+
 source_dir_cleanup = False
+http_parser_url = 'https://github.com/nodejs/http-parser.git'
 
 git = find_executable('git')
 formatter = find_executable('clang-format')
@@ -63,7 +65,7 @@ if os.path.isfile(git) is not True and os.access(git, os.X_OK) is not True:
 if args.source_dir is None:
     if call(['git',
              'clone',
-             'https://github.com/nodejs/http-parser.git',
+             http_parser_url,
              tempfile.gettempdir() + '/http-parser']) is 0:
         args.source_dir = tempfile.gettempdir() + '/http-parser'
         source_dir_cleanup = True
