@@ -1,4 +1,4 @@
-# [<img title="recurse-logo" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/xwalk/recurse.git)
+# [<img title="Recurse" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/xwalk/recurse.git)
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
 
