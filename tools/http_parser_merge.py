@@ -67,6 +67,7 @@ if args.source_dir is None:
              'clone',
              http_parser_url,
              tempfile.gettempdir() + '/http-parser']) is 0:
+
         args.source_dir = tempfile.gettempdir() + '/http-parser'
         source_dir_cleanup = True
     else:
