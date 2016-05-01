@@ -63,7 +63,7 @@ if os.path.isfile(git) is not True and os.access(git, os.X_OK) is not True:
 # if http-parser source directory not defined, fetch it from git
 # if it fails, fall back to '$PWD/..'
 if args.source_dir is None:
-    if call(['git',
+    if call([git,
              'clone',
              http_parser_url,
              tempfile.gettempdir() + '/http-parser']) is 0:
