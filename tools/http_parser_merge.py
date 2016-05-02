@@ -52,7 +52,8 @@ git = find_executable('git')
 formatter = find_executable('clang-format')
 formatter_style = '-style={ColumnLimit: 200, AllowShortFunctionsOnASingleLine: false}'
 
-if os.path.isfile(formatter) is not True and os.access(formatter, os.X_OK) is not True:
+if os.path.isfile(formatter) is not True and os.access(
+        formatter, os.X_OK) is not True:
     print 'clang-format not available'
     sys.exit(1)
 
@@ -130,8 +131,8 @@ for line in stock_implementation:
                 return
 
             if (line.find(key) is not -1 and line.find('if (') is -1 and
-                line.find('for (') is -1 and line.find(';') is -1 and
-                line.find('?') is -1):
+                    line.find('for (') is -1 and line.find(';') is -1 and
+                    line.find('?') is -1):
 
                 return 'function'
 
