@@ -608,6 +608,7 @@ namespace Recurse
             *ctx,
             std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx.data(), 0, middleware_prev.data()),
             std::bind(&Application::m_send_response, this, ctx.data()));
+	    */
         });
 
         connect(socket, &QAbstractSocket::disconnected, socket, &QObject::deleteLater);
