@@ -50,7 +50,7 @@ public:
 
     //!
     //! \brief secure
-    //! Shorthand for protocol == "HTTPS" to check if a requet was issued via TLS
+    //! Shorthand for protocol == "HTTPS" to check if a request was issued via TLS
     //!
     bool secure = protocol == "HTTPS";
 
@@ -175,30 +175,48 @@ private:
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
     http_parser m_parser;
+
     http_parser_settings m_parser_settings{
 	nullptr,
 	on_url,
-	nullptr,
+	on_status,
 	on_header_field,
-	nullptr,
+	on_header_value,
 	nullptr,
 	on_body,
 	on_message_complete,
-	nullptr,
+	on_chunk_header,
 	nullptr
     };
 
     static int on_url(http_parser *parser, const char *buf, size_t len)
     {
-        qDebug() << "url test" << QString::fromUtf8(buf, len);
+        auto self = static_cast<Request *>(parser->data);
+
+	self->url = QString::fromUtf8(buf, len);
+	self->query.setQuery(self->url.query());
+        qDebug() << "url test" << self->url;
+
         return 0;
-    }
+    };
+
+    static int on_status(http_parser *parser, const char *buf, size_t len)
+    {
+        qDebug() << "on_status test" << QString::fromUtf8(buf, len);
+        return 0;
+    };
 
     static int on_header_field(http_parser *parser, const char *buf, size_t len)
     {
-        qDebug() << "header test" << QString::fromUtf8(buf, len);
+        qDebug() << "header field test" << QString::fromUtf8(buf, len);
         return 0;
-    }
+    };
+
+    static int on_header_value(http_parser *parser, const char *buf, size_t len)
+    {
+        qDebug() << "header value test" << QString::fromUtf8(buf, len);
+        return 0;
+    };
 
     static int on_body(http_parser *parser, const char *buf, size_t length)
     {
@@ -206,12 +224,17 @@ private:
         return 0;
     };
 
+    static int on_chunk_header(http_parser *parser)
+    {
+        qDebug() << "on_chunk_header" << parser->content_length;
+        return 0;
+    };
     static int on_message_complete(http_parser *parser)
     {
         auto self = static_cast<Request *>(parser->data);
         qDebug() << "message complete for url" << self->url;
         return 0;
-    }
+    };
 };
 
 inline Request::Request()
