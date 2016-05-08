@@ -181,7 +181,7 @@ private:
     http_parser_settings m_parser_settings{
 	nullptr,
 	on_url,
-	on_status,
+	nullptr,
 	on_header_field,
 	on_header_value,
 	on_headers_complete,
@@ -199,14 +199,6 @@ private:
         request->query.setQuery(request->url.query());
         qDebug() << "url test" << request->url;
 
-        return 0;
-    };
-
-    static int on_status(http_parser *parser, const char *at, size_t length)
-    {
-        auto request = static_cast<Request *>(parser->data);
-
-        qDebug() << "on_status test" << QString::fromUtf8(at, length);
         return 0;
     };
 
