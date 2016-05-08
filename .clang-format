@@ -9,3 +9,4 @@ ContinuationIndentWidth: 0
 IndentCaseLabels: true
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
+ColumnLimit: 100
