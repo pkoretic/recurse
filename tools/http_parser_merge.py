@@ -64,12 +64,13 @@ if os.path.isfile(git) is not True and os.access(git, os.X_OK) is not True:
 # if http-parser source directory not defined, fetch it from git
 # if it fails, fall back to '$PWD/..'
 if args.source_dir is None:
-    if call([git,
-             'clone',
-             http_parser_url,
-             tempfile.gettempdir() + '/http-parser']) is 0:
+    temp_dir = tempfile.gettempdir()
 
-        args.source_dir = tempfile.gettempdir() + '/http-parser'
+    if call('cd ' + temp_dir + ' && git clone ' + http_parser_url
+            + ' && cd http-parser && ' + 'git checkout $(git describe --tags '
+            + '`git rev-list --tags --max-count=1`)',
+            shell=True) is 0:
+        args.source_dir = temp_dir + '/http-parser'
         source_dir_cleanup = True
     else:
         if args.verbose:
