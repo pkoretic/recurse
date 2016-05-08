@@ -5,7 +5,7 @@ TabWidth:        4
 UseTab:          Never
 BreakBeforeBraces: Allman
 AllowShortFunctionsOnASingleLine: false
-ContinuationIndentWidth: 0
+ContinuationIndentWidth: 4
 IndentCaseLabels: true
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: All
