@@ -175,6 +175,8 @@ private:
     QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
 
     http_parser m_parser;
+    QString m_current_header_field;
+    QString m_current_header_value;
 
     http_parser_settings m_parser_settings{
 	nullptr,
@@ -182,57 +184,78 @@ private:
 	on_status,
 	on_header_field,
 	on_header_value,
-	nullptr,
+	on_headers_complete,
 	on_body,
 	on_message_complete,
 	on_chunk_header,
 	nullptr
     };
 
-    static int on_url(http_parser *parser, const char *buf, size_t len)
+    static int on_url(http_parser *parser, const char *at, size_t length)
     {
-        auto self = static_cast<Request *>(parser->data);
+        auto request = static_cast<Request *>(parser->data);
 
-	self->url = QString::fromUtf8(buf, len);
-	self->query.setQuery(self->url.query());
-        qDebug() << "url test" << self->url;
+        request->url = QString::fromUtf8(at, length);
+        request->query.setQuery(request->url.query());
+        qDebug() << "url test" << request->url;
 
         return 0;
     };
 
-    static int on_status(http_parser *parser, const char *buf, size_t len)
+    static int on_status(http_parser *parser, const char *at, size_t length)
     {
-        qDebug() << "on_status test" << QString::fromUtf8(buf, len);
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "on_status test" << QString::fromUtf8(at, length);
         return 0;
     };
 
-    static int on_header_field(http_parser *parser, const char *buf, size_t len)
+    static int on_header_field(http_parser *parser, const char *at, size_t length)
     {
-        qDebug() << "header field test" << QString::fromUtf8(buf, len);
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "header field test" << QString::fromUtf8(at, length);
+
+        request->m_current_header_field = QString::fromLatin1(at, length);
         return 0;
     };
 
-    static int on_header_value(http_parser *parser, const char *buf, size_t len)
+    static int on_header_value(http_parser *parser, const char *at, size_t length)
     {
-        qDebug() << "header value test" << QString::fromUtf8(buf, len);
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "header value test" << QString::fromUtf8(at, length);
         return 0;
     };
 
-    static int on_body(http_parser *parser, const char *buf, size_t length)
+    static int on_headers_complete(http_parser *parser)
     {
-        qDebug() << "body:" << QString::fromUtf8(buf, length);
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "all headers arrived";
+        return 0;
+    };
+
+    static int on_body(http_parser *parser, const char *at, size_t length)
+    {
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "body:" << QString::fromUtf8(at, length);
         return 0;
     };
 
     static int on_chunk_header(http_parser *parser)
     {
+        auto request = static_cast<Request *>(parser->data);
+
         qDebug() << "on_chunk_header" << parser->content_length;
         return 0;
     };
     static int on_message_complete(http_parser *parser)
     {
-        auto self = static_cast<Request *>(parser->data);
-        qDebug() << "message complete for url" << self->url;
+        auto request = static_cast<Request *>(parser->data);
+
+        qDebug() << "message complete for url" << request->url;
         return 0;
     };
 };
