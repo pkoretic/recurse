@@ -1,11 +1,11 @@
 #ifndef RECURSE_REQUEST_HPP
 #define RECURSE_REQUEST_HPP
 
-#include <QTcpSocket>
+#include "lib/http_parser_merged.h"
 #include <QHash>
+#include <QTcpSocket>
 #include <QUrl>
 #include <QUrlQuery>
-#include "lib/http_parser_merged.h"
 
 class Request
 {
@@ -179,16 +179,25 @@ private:
     QString m_current_header_value;
 
     http_parser_settings m_parser_settings{
-	nullptr,
-	on_url,
-	nullptr,
-	on_header_field,
-	on_header_value,
-	on_headers_complete,
-	on_body,
-	on_message_complete,
-	on_chunk_header,
-	nullptr
+        on_message_begin,
+        on_url,
+        nullptr,
+        on_header_field,
+        on_header_value,
+        on_headers_complete,
+        on_body,
+        on_message_complete,
+        on_chunk_header,
+        nullptr };
+
+    static int on_message_begin(http_parser *parser)
+    {
+        auto request = static_cast<Request *>(parser->data);
+
+        request->m_headers.clear();
+        request->url.clear();
+
+        return 0;
     };
 
     static int on_url(http_parser *parser, const char *at, size_t length)
@@ -197,7 +206,7 @@ private:
 
         request->url = QString::fromUtf8(at, length);
         request->query.setQuery(request->url.query());
-        qDebug() << "url test" << request->url;
+        qDebug() << "url" << request->url;
 
         return 0;
     };
@@ -206,9 +215,20 @@ private:
     {
         auto request = static_cast<Request *>(parser->data);
 
-        qDebug() << "header field test" << QString::fromUtf8(at, length);
+        qDebug() << "header field" << QString::fromUtf8(at, length);
 
-        request->m_current_header_field = QString::fromLatin1(at, length);
+        if (!(request->m_current_header_field.isEmpty())
+            && !(request->m_current_header_value.isEmpty()))
+        {
+            request->m_headers[request->m_current_header_field.toLower()] =
+                request->m_current_header_value;
+
+            // clear headers to simply append to them later
+            request->m_current_header_field = QString();
+            request->m_current_header_value = QString();
+        }
+
+        request->m_current_header_field += QString::fromLatin1(at, length);
         return 0;
     };
 
@@ -216,7 +236,9 @@ private:
     {
         auto request = static_cast<Request *>(parser->data);
 
-        qDebug() << "header value test" << QString::fromUtf8(at, length);
+        qDebug() << "header value" << QString::fromUtf8(at, length);
+
+        request->m_current_header_value += QString::fromLatin1(at, length);
         return 0;
     };
 
@@ -224,7 +246,11 @@ private:
     {
         auto request = static_cast<Request *>(parser->data);
 
-        qDebug() << "all headers arrived";
+        // add last header
+        request->m_headers[request->m_current_header_field.toLower()] =
+            request->m_current_header_value;
+
+        qDebug() << "all headers arrived" << request->m_headers;
         return 0;
     };
 
