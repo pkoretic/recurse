@@ -47,6 +47,7 @@ temp_c_path = args.dest_dir + '/' + temp_c_filename
 
 source_dir_cleanup = False
 http_parser_url = 'https://github.com/nodejs/http-parser.git'
+http_parser_version = 'v2.7.0'
 
 git = find_executable('git')
 formatter = find_executable('clang-format')
@@ -67,8 +68,7 @@ if args.source_dir is None:
     temp_dir = tempfile.gettempdir()
 
     if call('cd ' + temp_dir + ' && git clone ' + http_parser_url
-            + ' && cd http-parser && ' + 'git checkout $(git describe --tags '
-            + '`git rev-list --tags --max-count=1`)',
+            + ' && cd http-parser && ' + 'git checkout ' + http_parser_version,
             shell=True) is 0:
         args.source_dir = temp_dir + '/http-parser'
         source_dir_cleanup = True
