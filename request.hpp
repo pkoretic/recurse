@@ -170,19 +170,15 @@ private:
     //!
     QHash<QString, QString> m_cookies;
 
-    //!
-    //! \brief httpRx
-    //! match HTTP request line
-    //!
-    QRegExp httpRx = QRegExp("^(?=[A-Z]).* \\/.* HTTP\\/[0-9]\\.[0-9]\\r\\n");
-
     http_parser m_parser;
     QString m_current_header_field;
     QString m_current_header_value;
     QByteArray m_current_url;
     QByteArray m_current_body;
 
-    http_parser_settings m_parser_settings{ on_message_begin, on_url, nullptr, on_header_field,
+    http_parser_settings m_parser_settings{
+        on_message_begin,
+        on_url, nullptr, on_header_field,
         on_header_value, on_headers_complete, on_body, on_message_complete, on_chunk_header,
         on_chunk_complete };
 
@@ -194,9 +190,6 @@ private:
         connection->url.clear();
         return 0;
     };
-
-    // TODO: on_url+, on_status, on_header_field+, on_header_value+ and
-    // on_body can arrive chunked, so append their data
 
     static int on_url(http_parser *parser, const char *at, size_t length)
     {
