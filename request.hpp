@@ -28,6 +28,7 @@ public:
     //!
     //! \brief body_parsed
     //! Data to be filled by body parsing middleware
+    //! it's easier to provide a container here (which doesn't have to be used)
     //!
     QHash<QString, QVariant> body_parsed;
 
@@ -46,7 +47,7 @@ public:
     //! \brief protocol
     //! Request protocol, eg: HTTP
     //!
-    QString protocol;
+    QString protocol = "HTTP";
 
     //!
     //! \brief secure
@@ -70,14 +71,15 @@ public:
     //! \brief params
     //!
     //! request parameters that can be filled by router middlewares
-    //! it's easier to provide container here (which doesn't have to be used)
+    //! it's easier to provide a container here (which doesn't have to be used)
+    //!
     QHash<QString, QString> params;
 
     //!
     //! \brief length
     //! HTTP request Content-Length
     //!
-    qint64 length = 0;
+    quint64 length = 0;
 
     //!
     //! \brief ip
@@ -177,105 +179,156 @@ private:
     http_parser m_parser;
     QString m_current_header_field;
     QString m_current_header_value;
+    QByteArray m_current_url;
+    QByteArray m_current_body;
 
-    http_parser_settings m_parser_settings{
-        on_message_begin,
-        on_url,
-        nullptr,
-        on_header_field,
-        on_header_value,
-        on_headers_complete,
-        on_body,
-        on_message_complete,
-        on_chunk_header,
-        nullptr };
+    http_parser_settings m_parser_settings{ on_message_begin, on_url, nullptr, on_header_field,
+        on_header_value, on_headers_complete, on_body, on_message_complete, on_chunk_header,
+        on_chunk_complete };
 
     static int on_message_begin(http_parser *parser)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
-        request->m_headers.clear();
-        request->url.clear();
-
+        connection->m_headers.clear();
+        connection->url.clear();
         return 0;
     };
 
+    // TODO: on_url+, on_status, on_header_field+, on_header_value+ and
+    // on_body can arrive chunked, so append their data
+
     static int on_url(http_parser *parser, const char *at, size_t length)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
-        request->url = QString::fromUtf8(at, length);
-        request->query.setQuery(request->url.query());
-        qDebug() << "url" << request->url;
-
+        connection->m_current_url.append(at, length);
         return 0;
     };
 
     static int on_header_field(http_parser *parser, const char *at, size_t length)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
         qDebug() << "header field" << QString::fromUtf8(at, length);
 
-        if (!(request->m_current_header_field.isEmpty())
-            && !(request->m_current_header_value.isEmpty()))
+        if (!(connection->m_current_header_field.isEmpty())
+            && !(connection->m_current_header_value.isEmpty()))
         {
-            request->m_headers[request->m_current_header_field.toLower()] =
-                request->m_current_header_value;
+            connection->m_headers[connection->m_current_header_field.toLower()]
+                = connection->m_current_header_value;
 
             // clear headers to simply append to them later
-            request->m_current_header_field = QString();
-            request->m_current_header_value = QString();
+            connection->m_current_header_field = QString();
+            connection->m_current_header_value = QString();
         }
 
-        request->m_current_header_field += QString::fromLatin1(at, length);
+        connection->m_current_header_field += QString::fromLatin1(at, length);
         return 0;
     };
 
     static int on_header_value(http_parser *parser, const char *at, size_t length)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
         qDebug() << "header value" << QString::fromUtf8(at, length);
 
-        request->m_current_header_value += QString::fromLatin1(at, length);
+        connection->m_current_header_value += QString::fromLatin1(at, length);
         return 0;
     };
 
     static int on_headers_complete(http_parser *parser)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
         // add last header
-        request->m_headers[request->m_current_header_field.toLower()] =
-            request->m_current_header_value;
+        connection->m_headers[connection->m_current_header_field.toLower()]
+            = connection->m_current_header_value;
 
-        qDebug() << "all headers arrived" << request->m_headers;
+        // TODO: if 0, respond with the "Connection: close" header and close the connection
+        qDebug() << http_should_keep_alive(parser);
+
+        // set url and query parameters
+        connection->url = QString(connection->m_current_url);
+        connection->query.setQuery(connection->url.query());
+
+        if (connection->m_headers.contains("host"))
+            connection->hostname = connection->m_headers["host"];
+
+        if (connection->m_headers.contains("content-length"))
+            connection->length = connection->m_headers["content-length"].toULongLong();
+
+        // extract cookies
+        // eg: USER_TOKEN=Yes;test=val
+        if (connection->m_headers.contains("cookie"))
+        {
+            for (const auto &cookie : connection->m_headers["cookie"].splitRef(";"))
+            {
+                int split = cookie.indexOf("=");
+
+                if (split == -1)
+                    continue;
+
+                auto key = cookie.left(split);
+
+                if (!key.size())
+                    continue;
+
+                auto value = cookie.mid(split + 1);
+
+                connection->m_cookies[key.toString().toLower()] = value.toString();
+            }
+        }
+
+        // set user's remote ip address
+        connection->ip = connection->socket->peerAddress();
+
+        qDebug() << "all headers arrived" << connection->length;
+
+        connection->method = http_method_str(static_cast<http_method>(parser->method));
         return 0;
     };
 
     static int on_body(http_parser *parser, const char *at, size_t length)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
-        qDebug() << "body:" << QString::fromUtf8(at, length);
+        connection->m_current_body.append(at, length);
         return 0;
     };
 
     static int on_chunk_header(http_parser *parser)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
         qDebug() << "on_chunk_header" << parser->content_length;
         return 0;
     };
+
     static int on_message_complete(http_parser *parser)
     {
-        auto request = static_cast<Request *>(parser->data);
+        auto connection = static_cast<Request *>(parser->data);
 
-        qDebug() << "message complete for url" << request->url;
+        // TODO: if 0, respond with the "Connection: close" header and close the connection
+        qDebug() << http_should_keep_alive(parser);
+
+        // set body
+        connection->body = QString(connection->m_current_body);
+
+        qDebug() << "message complete for url" << connection->url;
+        qDebug() << "body" << connection->body;
         return 0;
     };
+
+
+    static int on_chunk_complete(http_parser *parser)
+    {
+        auto connection = static_cast<Request *>(parser->data);
+
+        // TODO: if chunked, readyRead from recurse.hpp gets fired multiple times!
+        qDebug() << "on_chunk_complete";
+        return 0;
+    }
 };
 
 inline Request::Request()
@@ -289,76 +342,9 @@ inline Request::Request()
 
 inline bool Request::parse(const char *data)
 {
-    // Save client ip address
-    this->ip = this->socket->peerAddress();
-
     qDebug() << "start exec\n";
     auto nparsed = http_parser_execute(&m_parser, &m_parser_settings, data, qstrlen(data));
     qDebug() << "end exec" << nparsed;
-
-    /*
-    // if no header is present, just append all data to request.body
-    if (!this->data.contains(httpRx))
-    {
-        this->body.append(this->data);
-        return true;
-    }
-
-    auto data_list = this->data.splitRef("\r\n");
-    bool is_body = false;
-
-    for (int i = 0; i < data_list.size(); ++i)
-    {
-        if (is_body)
-        {
-            this->body.append(data_list.at(i));
-            this->length += this->body.size();
-            continue;
-        }
-
-        auto entity_item = data_list.at(i).split(":");
-
-        if (entity_item.length() < 2 && entity_item.at(0).size() < 1 && !is_body)
-        {
-            is_body = true;
-            continue;
-        }
-        else if (i == 0 && entity_item.length() < 2)
-        {
-            auto first_line = entity_item.at(0).split(" ");
-            this->method = first_line.at(0).toString();
-            this->url = first_line.at(1).toString();
-            this->query.setQuery(this->url.query());
-            this->protocol = first_line.at(2).toString();
-            continue;
-        }
-
-        m_headers[entity_item.at(0).toString().toLower()] = entity_item.at(1).toString();
-    }
-
-    if (m_headers.contains("host"))
-        this->hostname = m_headers["host"];
-
-    // extract cookies
-    // eg: USER_TOKEN=Yes;test=val
-    if (m_headers.contains("cookie"))
-    {
-        for (const auto &cookie : m_headers["cookie"].splitRef(";"))
-        {
-            int split = cookie.indexOf("=");
-            if (split == -1)
-                continue;
-
-            auto key = cookie.left(split);
-            if (!key.size())
-                continue;
-
-            auto value = cookie.mid(split + 1);
-
-            m_cookies[key.toString().toLower()] = value.toString();
-        }
-    }
-    */
 
     return true;
 }
