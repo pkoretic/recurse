@@ -14,8 +14,8 @@ int main(int argc, char *argv[])
     QMutex mutex;
     QSqlDatabase db = QSqlDatabase::addDatabase("QPSQL");
     db.setHostName("127.0.0.1");
-    db.setDatabaseName("postgsres");
-    db.setUserName("postgress");
+    db.setDatabaseName("postgres");
+    db.setUserName("postgres");
     db.setPassword("");
 
     if (!db.open())
