@@ -598,7 +598,7 @@ namespace Recurse
             // QString data(ctx->request.socket->readAll());
             ctx->request.parse(ctx->request.socket->readAll().constData());
 
-            if (ctx->request.length < ctx->request.getHeader("content-length").toLongLong())
+            if (ctx->request.length < ctx->request.getHeader("content-length").toULongLong())
                 return;
 
             ctx->response.end = std::bind(&Application::m_start_upstream, this, ctx.data(), middleware_prev.data());
