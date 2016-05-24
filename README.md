@@ -1,6 +1,6 @@
-# [<img title="Recurse" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/xwalk/recurse.git)
+# [<img title="Recurse" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/qaap/recurse.git)
 
-[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/xwalk/recurse/blob/master/LICENSE)
+[![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/qaap/recurse/blob/master/LICENSE)
 
 Recurse is set to be a modern web micro framework written in latest C++ (14) using
 Qt library leveraging all the best features of both worlds.  We strongly
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 ## Middlewares
 
 There is no middleware bundled in the core.
-For example, for routing, one can use [Router](https://github.com/xwalk/recurse-router)
+For example, for routing, one can use [Router](https://github.com/qaap/recurse-router)
 
 ```
 #include "router.hpp"
@@ -97,7 +97,7 @@ app.use([](auto &ctx, auto next, auto prev)
 
 ## Styling
 
-When writing code please use provided [.clang-format](https://github.com/xwalk/recurse/blob/master/.clang-format).
+When writing code please use provided [.clang-format](https://github.com/qaap/recurse/blob/master/.clang-format).
 There is a nice [vim-clang-format](https://github.com/rhysd/vim-clang-format) plugin that you can use in vim.
 
 You can also call it manually
