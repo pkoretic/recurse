@@ -76,7 +76,7 @@ app.use([](auto &ctx)
     ctx.response.status(404).send("Custom Not Found");
 });
 ```
-For complete example see [404 example](https://github.com/xwalk/recurse/tree/master/examples/404)
+For a complete example see [404 example](https://github.com/qaap/recurse/tree/master/examples/404)
 
 You can also have it as a **first** middleware (if you already have some first
 middleware that does your logging or similar)
