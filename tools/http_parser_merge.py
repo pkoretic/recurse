@@ -47,7 +47,7 @@ temp_c_path = args.dest_dir + '/' + temp_c_filename
 
 source_dir_cleanup = False
 http_parser_url = 'https://github.com/nodejs/http-parser.git'
-http_parser_version = 'v2.7.0'
+http_parser_version = 'v2.7.1'
 
 git = find_executable('git')
 formatter = find_executable('clang-format')
