@@ -97,7 +97,7 @@ app.use([](auto &ctx, auto next, auto prev)
 
 ## Styling
 
-When writing code please use provided [.clang-format](https://github.com/qaap/recurse/blob/master/.clang-format).
+When writing code, please use the provided [.clang-format](https://github.com/qaap/recurse/blob/master/.clang-format) file.
 There is a nice [vim-clang-format](https://github.com/rhysd/vim-clang-format) plugin that you can use in vim.
 
 You can also call it manually
