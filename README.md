@@ -1,6 +1,8 @@
 # [<img title="Recurse" src="http://i.imgur.com/HJ1oUqY.png" width="810px" alt="Recurse logo"/>](https://github.com/qaap/recurse.git)
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](https://github.com/qaap/recurse/blob/master/LICENSE)
+[![Language (C++)](https://img.shields.io/badge/powered_by-C++-green.svg?style=flat-square)](https://img.shields.io/badge/powered_by-C++-green.svg?style=flat-square)
+
 
 Recurse is set to be a modern web micro framework written in latest C++ (14) using
 Qt library leveraging all the best features of both worlds.  We strongly
