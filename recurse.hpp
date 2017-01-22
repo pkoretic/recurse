@@ -520,7 +520,7 @@ namespace Recurse
         ++current_middleware;
 
         // save previous middleware function
-        middleware_prev->push_back(prev);
+        middleware_prev->push_back(std::move(prev));
 
         // call next function with current prev
         m_middleware_next[current_middleware](*ctx, std::bind(&Application::m_call_next, this, std::placeholders::_1, ctx, current_middleware, middleware_prev), prev);
@@ -536,7 +536,7 @@ namespace Recurse
     //!
     inline void Application::use(DownstreamUpstream f)
     {
-        m_middleware_next.push_back(f);
+        m_middleware_next.push_back(std::move(f));
     }
 
     //!
@@ -547,9 +547,9 @@ namespace Recurse
     //!
     inline void Application::use(Downstream f)
     {
-        m_middleware_next.push_back([f](Context &ctx, NextPrev next, Prev prev)
+        m_middleware_next.push_back([g = std::move(f)](Context &ctx, NextPrev next, Prev prev)
         {
-            f(ctx, [next, prev]()
+            g(ctx, [next, prev]()
             {
                 next([prev]()
                 {
@@ -568,9 +568,9 @@ namespace Recurse
     //!
     inline void Application::use(Final f)
     {
-        m_middleware_next.push_back([f](Context &ctx, NextPrev /* next */, Prev /* prev */)
+        m_middleware_next.push_back([g = std::move(f)](Context &ctx, NextPrev /* next */, Prev /* prev */)
         {
-            f(ctx);
+            g(ctx);
         });
     }
 
