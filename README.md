@@ -42,6 +42,14 @@ int main(int argc, char *argv[])
 };
 ```
 
+## Installation
+
+This is a header-only library. To use, just include `recurse.hpp` inside your project. See
+[examples](examples) for more information.
+
+**`NOTE`** you also need `context.hpp`, `request.hpp`, `response.hpp` as `recurse.hpp` depends on
+them.
+
 ## Middlewares
 
 There is no middleware bundled in the core.
